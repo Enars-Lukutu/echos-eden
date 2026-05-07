@@ -1,0 +1,2757 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Echos d'Eden</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/n5ro/aframe-physics-system@v4.0.1/dist/aframe-physics-system.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/super-hands@3.0.0/dist/super-hands.min.js"></script>
+
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      
+      :root {
+        --primary: #4CAF50;
+        --secondary: #2196F3;
+        --accent: #FF9800;
+        --danger: #F44336;
+        --dark: rgba(10, 15, 25, 0.95);
+        --glass: rgba(255, 255, 255, 0.08);
+        --glow: 0 0 20px rgba(76, 175, 80, 0.3);
+      }
+      
+      body { overflow: hidden; }
+      
+      #game-ui {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 999;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      }
+      
+      .ui-panel {
+        pointer-events: auto;
+        background: var(--dark);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+      
+      /* Classe pour masquer les panneaux */
+      .ui-panel.hidden-panel {
+        opacity: 0;
+        transform: scale(0.8);
+        pointer-events: none;
+      }
+      
+      /* Bouton toggle HUD */
+      #toggle-hud-btn {
+        position: fixed;
+        bottom: 15px;
+        right: 190px;
+        background: var(--dark);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 30px;
+        padding: 8px 16px;
+        color: #fff;
+        font-size: 12px;
+        cursor: pointer;
+        pointer-events: auto;
+        z-index: 1001;
+        transition: all 0.2s;
+      }
+      
+      #toggle-hud-btn:hover {
+        background: rgba(255,255,255,0.15);
+        border-color: var(--primary);
+      }
+      
+      /* Top Bar - Time & Weather */
+      #top-bar {
+        position: absolute;
+        top: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 20px;
+        padding: 12px 25px;
+        align-items: center;
+      }
+      
+      .top-section {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      
+      .top-icon { font-size: 22px; }
+      
+      .top-info {
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .top-main {
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+      }
+      
+      .top-sub {
+        font-size: 10px;
+        color: rgba(255,255,255,0.5);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      
+      .divider {
+        width: 1px;
+        height: 30px;
+        background: rgba(255,255,255,0.15);
+      }
+      
+      /* Left Panel - Environment Stats */
+      #left-panel {
+        position: absolute;
+        top: 80px;
+        left: 15px;
+        padding: 18px;
+        width: 240px;
+      }
+      
+      .panel-title {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--primary);
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      
+      .stat-box {
+        background: var(--glass);
+        padding: 10px;
+        border-radius: 10px;
+        transition: all 0.3s;
+      }
+      
+      .stat-box:hover {
+        background: rgba(255,255,255,0.12);
+        transform: translateY(-2px);
+      }
+      
+      .stat-label {
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: rgba(255,255,255,0.45);
+        margin-bottom: 4px;
+      }
+      
+      .stat-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #fff;
+      }
+      
+      /* Action Buttons */
+      #action-panel {
+        position: absolute;
+        top: 340px;
+        left: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      
+      .action-btn {
+        background: var(--glass);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #fff;
+        padding: 10px 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 500;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        pointer-events: auto;
+        width: 140px;
+      }
+      
+      .action-btn:hover {
+        background: rgba(255,255,255,0.15);
+        transform: translateX(5px);
+        border-color: var(--primary);
+      }
+      
+      /* Right Panel - Inventory */
+      #right-panel {
+        position: absolute;
+        top: 80px;
+        right: 15px;
+        padding: 15px;
+        width: 200px;
+      }
+      
+      .inventory-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+      }
+      
+      .inv-slot {
+        aspect-ratio: 1;
+        background: var(--glass);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+      }
+      
+      .inv-slot:hover {
+        background: rgba(255,255,255,0.15);
+        border-color: rgba(255,255,255,0.2);
+        transform: scale(1.08);
+      }
+      
+      .inv-slot .qty {
+        position: absolute;
+        bottom: 2px;
+        right: 4px;
+        font-size: 9px;
+        font-weight: bold;
+        color: #fff;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      }
+      
+      /* Quest Panel */
+      #quest-panel {
+        position: absolute;
+        top: 300px;
+        right: 15px;
+        padding: 15px;
+        width: 200px;
+      }
+      
+      .quest-item {
+        background: var(--glass);
+        padding: 10px;
+        border-radius: 8px;
+        margin-top: 8px;
+        border-left: 3px solid var(--accent);
+      }
+      
+      .quest-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: #fff;
+      }
+      
+      .quest-progress {
+        font-size: 10px;
+        color: rgba(255,255,255,0.5);
+        margin-top: 3px;
+      }
+      
+      .quest-bar {
+        height: 4px;
+        background: rgba(0,0,0,0.4);
+        border-radius: 2px;
+        margin-top: 6px;
+        overflow: hidden;
+      }
+      
+      .quest-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent), #FFB74D);
+        border-radius: 2px;
+        transition: width 0.5s;
+      }
+      
+      /* Player Stats - Bottom Center */
+      #player-stats {
+        position: absolute;
+        bottom: 90px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 12px;
+        padding: 12px 20px;
+      }
+      
+      .player-bar {
+        width: 140px;
+      }
+      
+      .bar-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        font-size: 10px;
+        color: rgba(255,255,255,0.7);
+      }
+      
+      .bar-container {
+        height: 10px;
+        background: rgba(0,0,0,0.5);
+        border-radius: 5px;
+        overflow: hidden;
+      }
+      
+      .bar-fill {
+        height: 100%;
+        border-radius: 5px;
+        transition: width 0.5s ease;
+        position: relative;
+      }
+      
+      .bar-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 50%;
+        background: linear-gradient(180deg, rgba(255,255,255,0.3), transparent);
+      }
+      
+      .health-fill { background: linear-gradient(90deg, #e53935, #ef5350); }
+      .stamina-fill { background: linear-gradient(90deg, #43a047, #66bb6a); }
+      .hunger-fill { background: linear-gradient(90deg, #fb8c00, #ffa726); }
+      .thirst-fill { background: linear-gradient(90deg, #1e88e5, #42a5f5); }
+      .xp-fill { background: linear-gradient(90deg, #9c27b0, #ba68c8); }
+      
+      /* Hotbar */
+      #hotbar {
+        position: absolute;
+        bottom: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 6px;
+        padding: 10px 14px;
+      }
+      
+      .hotbar-slot {
+        width: 50px;
+        height: 50px;
+        background: var(--glass);
+        border: 2px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+      }
+      
+      .hotbar-slot:hover, .hotbar-slot.selected {
+        border-color: var(--primary);
+        background: rgba(76, 175, 80, 0.2);
+        transform: translateY(-3px);
+      }
+      
+      .hotbar-slot .icon { font-size: 22px; }
+      
+      .hotbar-slot .key {
+        position: absolute;
+        top: 3px;
+        left: 5px;
+        font-size: 9px;
+        color: rgba(255,255,255,0.4);
+      }
+      
+      /* Minimap */
+      #minimap-panel {
+        position: absolute;
+        bottom: 15px;
+        right: 15px;
+        padding: 8px;
+        width: 160px;
+        height: 160px;
+      }
+      
+      #minimap-canvas {
+        width: 100%;
+        height: 100%;
+        border-radius: 8px;
+      }
+      
+      .compass {
+        position: absolute;
+        top: -18px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 10px;
+        color: rgba(255,255,255,0.6);
+        letter-spacing: 3px;
+      }
+      
+      /* Controls Panel */
+      #controls-panel {
+        position: absolute;
+        bottom: 15px;
+        left: 15px;
+        padding: 12px 15px;
+        font-size: 10px;
+      }
+      
+      .control-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 4px 0;
+        color: rgba(255,255,255,0.6);
+      }
+      
+      .key-badge {
+        background: rgba(255,255,255,0.12);
+        padding: 3px 7px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 9px;
+        min-width: 35px;
+        text-align: center;
+      }
+      
+      /* Skills Panel */
+      #skills-panel {
+        position: absolute;
+        top: 530px;
+        left: 15px;
+        padding: 15px;
+        width: 200px;
+      }
+      
+      .skill-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 6px 0;
+      }
+      
+      .skill-icon { font-size: 14px; }
+      
+      .skill-info { flex: 1; }
+      
+      .skill-name {
+        font-size: 10px;
+        color: rgba(255,255,255,0.7);
+      }
+      
+      .skill-bar {
+        height: 5px;
+        background: rgba(0,0,0,0.4);
+        border-radius: 3px;
+        margin-top: 3px;
+        overflow: hidden;
+      }
+      
+      .skill-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), #81c784);
+        border-radius: 3px;
+      }
+      
+      /* Crosshair */
+      #crosshair {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 1000;
+      }
+      
+      #crosshair svg {
+        width: 28px;
+        height: 28px;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+      }
+      
+      /* Notifications */
+      #notifications {
+        position: fixed;
+        top: 80px;
+        right: 230px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 1001;
+        pointer-events: none;
+      }
+      
+      .notification {
+        background: var(--dark);
+        backdrop-filter: blur(10px);
+        padding: 10px 18px;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 12px;
+        animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-left: 3px solid var(--primary);
+      }
+      
+      .notification.warning { border-left-color: var(--accent); }
+      .notification.danger { border-left-color: var(--danger); }
+      
+      @keyframes slideIn {
+        from { transform: translateX(50px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      
+      @keyframes fadeOut {
+        to { opacity: 0; transform: translateX(30px); }
+      }
+      
+      /* Interaction Prompt */
+      #interact-prompt {
+        position: fixed;
+        bottom: 180px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--dark);
+        padding: 8px 20px;
+        border-radius: 20px;
+        color: #fff;
+        font-size: 12px;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      #interact-prompt.visible { opacity: 1; }
+      
+      /* Level Badge */
+      #level-badge {
+        position: absolute;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #FFD700, #FFA000);
+        padding: 6px 20px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #1a1a1a;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+      }
+      
+      /* Achievement Popup */
+      #achievement {
+        position: fixed;
+        top: 120px;
+        left: 50%;
+        transform: translateX(-50%) scale(0);
+        background: linear-gradient(135deg, var(--dark), rgba(30,35,50,0.98));
+        padding: 15px 30px;
+        border-radius: 12px;
+        color: #fff;
+        z-index: 1002;
+        border: 2px solid #FFD700;
+        box-shadow: 0 0 30px rgba(255,215,0,0.3);
+        transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        text-align: center;
+      }
+      
+      #achievement.show { transform: translateX(-50%) scale(1); }
+      
+      #achievement h3 {
+        color: #FFD700;
+        font-size: 14px;
+        margin-bottom: 5px;
+      }
+      
+      /* Weather Overlay */
+      #weather-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 500;
+        opacity: 0;
+        transition: opacity 1s;
+      }
+      
+      #weather-overlay.rain {
+        background: linear-gradient(180deg, rgba(100,120,150,0.15) 0%, rgba(80,100,130,0.25) 100%);
+        opacity: 1;
+      }
+      
+      #weather-overlay.fog {
+        background: rgba(180,190,200,0.4);
+        opacity: 1;
+      }
+      
+      #weather-overlay.storm {
+        background: rgba(40,50,70,0.3);
+        opacity: 1;
+      }
+
+      @media (max-width: 768px) {
+  #left-panel, #right-panel, #quest-panel, #skills-panel, #controls-panel {
+    width: 90vw !important;
+    left: 5vw !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: 10px !important;
+    position: fixed;
+  }
+  #top-bar {
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 6px 12px;
+    font-size: 10px;
+  }
+  #player-stats {
+    bottom: 50px;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  #hotbar {
+    gap: 3px;
+    padding: 6px 10px;
+    bottom: 10px;
+  }
+  .hotbar-slot {
+    width: 36px;
+    height: 36px;
+  }
+  #minimap-panel {
+    width: 100px;
+    height: 100px;
+    bottom: 10px;
+    right: 10px;
+  }
+  #toggle-hud-btn {
+    bottom: 10px;
+    right: 10px;
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+}
+    </style>
+  </head>
+
+  <body>
+    <!-- Game UI -->
+    <div id="game-ui">
+      <!-- Bouton pour masquer/afficher les panneaux -->
+      <button id="toggle-hud-btn">🎮 Masquer HUD</button>
+      
+      <!-- Top Bar -->
+      <div id="top-bar" class="ui-panel">
+        <div class="top-section">
+          <span class="top-icon" id="time-icon">🌅</span>
+          <div class="top-info">
+            <span class="top-main" id="clock">06:00</span>
+            <span class="top-sub">Jour <span id="day-num">1</span></span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="top-section">
+          <span class="top-icon" id="season-icon">🌸</span>
+          <div class="top-info">
+            <span class="top-main" id="season-name">Printemps</span>
+            <span class="top-sub" id="weather-name">Ensoleille</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="top-section">
+          <span class="top-icon">🌡️</span>
+          <div class="top-info">
+            <span class="top-main" id="temperature">22°C</span>
+            <span class="top-sub">Ressenti <span id="feels-like">24°C</span></span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="top-section">
+          <span class="top-icon">💨</span>
+          <div class="top-info">
+            <span class="top-main" id="wind-speed">8 km/h</span>
+            <span class="top-sub">Nord-Est</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Level Badge -->
+      <div id="level-badge">⭐ Niveau 1 - Novice</div>
+      
+      <!-- Left Panel -->
+      <div id="left-panel" class="ui-panel">
+        <div class="panel-title">📊 Environnement</div>
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="stat-label">Biome</div>
+            <div class="stat-value" id="biome">Foret</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Altitude</div>
+            <div class="stat-value" id="altitude">15m</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Faune</div>
+            <div class="stat-value" id="fauna">Active</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Humidite</div>
+            <div class="stat-value" id="humidity">65%</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Visibilite</div>
+            <div class="stat-value" id="visibility">Bonne</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Lune</div>
+            <div class="stat-value" id="moon-phase">🌓</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div id="action-panel">
+        <button class="action-btn" onclick="changeWeather()">🌤️ Meteo</button>
+        <button class="action-btn" onclick="toggleTimeSpeed()">⏱️ Temps x<span id="time-mult">1</span></button>
+        <button class="action-btn" onclick="changeSeason()">🍂 Saison</button>
+        <button class="action-btn" onclick="spawnCreature()">🦌 Creature</button>
+        <button class="action-btn" onclick="toggleFlashlight()">🔦 Lampe</button>
+        <button class="action-btn" onclick="teleportRandom()">✨ Teleport</button>
+      </div>
+      
+      <!-- Skills Panel -->
+      <div id="skills-panel" class="ui-panel">
+        <div class="panel-title">⚔️ Competences</div>
+        <div class="skill-row">
+          <span class="skill-icon">🏃</span>
+          <div class="skill-info">
+            <div class="skill-name">Agilite - Niv. <span id="skill-agility">1</span></div>
+            <div class="skill-bar"><div class="skill-fill" id="skill-agility-bar" style="width: 20%"></div></div>
+          </div>
+        </div>
+        <div class="skill-row">
+          <span class="skill-icon">🌿</span>
+          <div class="skill-info">
+            <div class="skill-name">Botanique - Niv. <span id="skill-botany">1</span></div>
+            <div class="skill-bar"><div class="skill-fill" id="skill-botany-bar" style="width: 15%"></div></div>
+          </div>
+        </div>
+        <div class="skill-row">
+          <span class="skill-icon">🎣</span>
+          <div class="skill-info">
+            <div class="skill-name">Peche - Niv. <span id="skill-fishing">1</span></div>
+            <div class="skill-bar"><div class="skill-fill" id="skill-fishing-bar" style="width: 10%"></div></div>
+          </div>
+        </div>
+        <div class="skill-row">
+          <span class="skill-icon">🐾</span>
+          <div class="skill-info">
+            <div class="skill-name">Pistage - Niv. <span id="skill-tracking">1</span></div>
+            <div class="skill-bar"><div class="skill-fill" id="skill-tracking-bar" style="width: 5%"></div></div>
+          </div>
+        </div>
+        <div class="skill-row">
+          <span class="skill-icon">⛏️</span>
+          <div class="skill-info">
+            <div class="skill-name">Minage - Niv. <span id="skill-mining">1</span></div>
+            <div class="skill-bar"><div class="skill-fill" id="skill-mining-bar" style="width: 8%"></div></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right Panel - Inventory -->
+      <div id="right-panel" class="ui-panel toggleable-panel">
+        <div class="panel-title">🎒 Inventaire</div>
+        <div class="inventory-grid">
+          <div class="inv-slot" title="Bois">🪵<span class="qty" id="qty-wood">0</span></div>
+          <div class="inv-slot" title="Pierre">🪨<span class="qty" id="qty-stone">0</span></div>
+          <div class="inv-slot" title="Fleur">🌸<span class="qty" id="qty-flower">0</span></div>
+          <div class="inv-slot" title="Champignon">🍄<span class="qty" id="qty-mushroom">0</span></div>
+          <div class="inv-slot" title="Baie">🫐<span class="qty" id="qty-berry">0</span></div>
+          <div class="inv-slot" title="Poisson">🐟<span class="qty" id="qty-fish">0</span></div>
+          <div class="inv-slot" title="Plume">🪶<span class="qty" id="qty-feather">0</span></div>
+          <div class="inv-slot" title="Herbe">🌿<span class="qty" id="qty-herb">0</span></div>
+          <div class="inv-slot" title="Miel">🍯<span class="qty" id="qty-honey">0</span></div>
+          <div class="inv-slot" title="Cristal">💎<span class="qty" id="qty-crystal">0</span></div>
+          <div class="inv-slot" title="Or">🪙<span class="qty" id="qty-gold">0</span></div>
+          <div class="inv-slot" title="Viande">🥩<span class="qty" id="qty-meat">0</span></div>
+        </div>
+      </div>
+      
+      <!-- Quest Panel -->
+      <div id="quest-panel" class="ui-panel toggleable-panel">
+        <div class="panel-title">📜 Quetes</div>
+        <div class="quest-item">
+          <div class="quest-title">🗺️ Explorateur</div>
+          <div class="quest-progress">Decouvrir 5 biomes (<span id="quest-biome">1</span>/5)</div>
+          <div class="quest-bar"><div class="quest-fill" id="quest-biome-bar" style="width: 20%"></div></div>
+        </div>
+        <div class="quest-item">
+          <div class="quest-title">🧺 Collecteur</div>
+          <div class="quest-progress">Ramasser 20 objets (<span id="quest-collect">0</span>/20)</div>
+          <div class="quest-bar"><div class="quest-fill" id="quest-collect-bar" style="width: 0%"></div></div>
+        </div>
+        <div class="quest-item">
+          <div class="quest-title">🦎 Naturaliste</div>
+          <div class="quest-progress">Observer 10 animaux (<span id="quest-animals">0</span>/10)</div>
+          <div class="quest-bar"><div class="quest-fill" id="quest-animals-bar" style="width: 0%"></div></div>
+        </div>
+      </div>
+      
+      <!-- Player Stats -->
+      <div id="player-stats" class="ui-panel toggleable-panel">
+        <div class="player-bar">
+          <div class="bar-header"><span>❤️ Sante</span><span id="health-val">100</span></div>
+          <div class="bar-container"><div class="bar-fill health-fill" id="health-bar" style="width: 100%"></div></div>
+        </div>
+        <div class="player-bar">
+          <div class="bar-header"><span>⚡ Energie</span><span id="stamina-val">100</span></div>
+          <div class="bar-container"><div class="bar-fill stamina-fill" id="stamina-bar" style="width: 100%"></div></div>
+        </div>
+        <div class="player-bar">
+          <div class="bar-header"><span>🍖 Faim</span><span id="hunger-val">100</span></div>
+          <div class="bar-container"><div class="bar-fill hunger-fill" id="hunger-bar" style="width: 100%"></div></div>
+        </div>
+        <div class="player-bar">
+          <div class="bar-header"><span>💧 Soif</span><span id="thirst-val">100</span></div>
+          <div class="bar-container"><div class="bar-fill thirst-fill" id="thirst-bar" style="width: 100%"></div></div>
+        </div>
+        <div class="player-bar">
+          <div class="bar-header"><span>⭐ XP</span><span id="xp-val">0/100</span></div>
+          <div class="bar-container"><div class="bar-fill xp-fill" id="xp-bar" style="width: 0%"></div></div>
+        </div>
+      </div>
+      
+      <!-- Hotbar -->
+      <div id="hotbar" class="ui-panel">
+        <div class="hotbar-slot selected"><span class="key">1</span><span class="icon">🪓</span></div>
+        <div class="hotbar-slot"><span class="key">2</span><span class="icon">⛏️</span></div>
+        <div class="hotbar-slot"><span class="key">3</span><span class="icon">🎣</span></div>
+        <div class="hotbar-slot"><span class="key">4</span><span class="icon">🔦</span></div>
+        <div class="hotbar-slot"><span class="key">5</span><span class="icon">🗺️</span></div>
+        <div class="hotbar-slot"><span class="key">6</span><span class="icon">🧪</span></div>
+        <div class="hotbar-slot"><span class="key">7</span><span class="icon">🏹</span></div>
+        <div class="hotbar-slot"><span class="key">8</span><span class="icon">🍖</span></div>
+      </div>
+      
+      <!-- Minimap -->
+      <div id="minimap-panel" class="ui-panel">
+        <div class="compass">N</div>
+        <canvas id="minimap-canvas" width="144" height="144"></canvas>
+      </div>
+      
+      <!-- Controls - toggleable -->
+      <div id="controls-panel" class="ui-panel toggleable-panel">
+        <div class="panel-title">🎮 Controles</div>
+        <div class="control-row"><span class="key-badge">ZQSD</span> Deplacement</div>
+        <div class="control-row"><span class="key-badge">SHIFT</span> Courir</div>
+        <div class="control-row"><span class="key-badge">SPACE</span> Sauter</div>
+        <div class="control-row"><span class="key-badge">E</span> Interagir</div>
+        <div class="control-row"><span class="key-badge">F</span> Lampe</div>
+        <div class="control-row"><span class="key-badge">1-8</span> Outils</div>
+      </div>
+    </div>
+    
+    <!-- Crosshair -->
+    <div id="crosshair">
+      <svg viewBox="0 0 28 28">
+        <circle cx="14" cy="14" r="2" fill="white" opacity="0.9"/>
+        <path d="M14 4 L14 10 M14 18 L14 24 M4 14 L10 14 M18 14 L24 14" stroke="white" stroke-width="1.5" opacity="0.7"/>
+      </svg>
+    </div>
+    
+    <!-- Notifications -->
+    <div id="notifications"></div>
+    
+    <!-- Interaction Prompt -->
+    <div id="interact-prompt">
+      <span class="key-badge">E</span>
+      <span id="prompt-text">Ramasser</span>
+    </div>
+    
+    <!-- Achievement Popup -->
+    <div id="achievement">
+      <h3>🏆 Succes Debloque!</h3>
+      <div id="achievement-text">Premier Pas</div>
+    </div>
+    
+    <!-- Weather Overlay -->
+    <div id="weather-overlay"></div>
+
+    <!-- A-Frame Scene -->
+    <a-scene fog="type: exponential; color: #AAD4E5; density: 0.004" 
+             renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true"
+             vr-mode-ui="enabled: true">
+      
+      <!-- Assets -->
+      <a-assets>
+        <a-mixin id="tree-trunk" material="roughness: 0.9; metalness: 0"></a-mixin>
+        <a-mixin id="foliage" material="roughness: 0.8; metalness: 0"></a-mixin>
+        <a-mixin id="rock" material="roughness: 0.95; metalness: 0.1"></a-mixin>
+        <a-mixin id="water" material="opacity: 0.85; metalness: 0.3; roughness: 0.2"></a-mixin>
+      </a-assets>
+
+      <!-- ==================== TERRAIN ==================== -->
+      <a-entity id="terrain">
+        <!-- Main Ground - Textured look -->
+        <a-plane id="ground" position="0 0 0" rotation="-90 0 0" width="500" height="500" 
+          color="#3d6b42" material="roughness: 0.95; metalness: 0"></a-plane>
+        
+        <!-- Ground Variation Patches -->
+        <a-plane position="-30 0.01 -40" rotation="-90 0 0" width="40" height="35" color="#4a7c4e" opacity="0.7"></a-plane>
+        <a-plane position="40 0.01 -60" rotation="-90 0 0" width="50" height="40" color="#3a5a3e" opacity="0.65"></a-plane>
+        <a-plane position="-60 0.01 -80" rotation="-90 0 0" width="35" height="30" color="#528755" opacity="0.7"></a-plane>
+        <a-plane position="70 0.01 -30" rotation="-90 0 0" width="30" height="35" color="#4d7a52" opacity="0.6"></a-plane>
+        <a-plane position="0 0.01 -100" rotation="-90 0 0" width="60" height="50" color="#3a6040" opacity="0.65"></a-plane>
+        
+        <!-- Sandy Areas (Beach/Desert patches) -->
+        <a-plane position="80 0.02 -50" rotation="-90 0 0" width="40" height="30" color="#C2B280" opacity="0.9"></a-plane>
+        <a-plane position="-90 0.02 -40" rotation="-90 0 0" width="35" height="25" color="#D4C590" opacity="0.85"></a-plane>
+        
+        <!-- Hills -->
+        <a-entity id="hills">
+          <a-sphere position="-70 -10 -80" radius="35" color="#3a5a40" scale="2 0.5 1.8"></a-sphere>
+          <a-sphere position="80 -12 -100" radius="45" color="#2d4a30" scale="2.2 0.6 2"></a-sphere>
+          <a-sphere position="-100 -15 -130" radius="55" color="#2a4530" scale="2.5 0.7 2.2"></a-sphere>
+          <a-sphere position="110 -10 -90" radius="40" color="#3a5a40" scale="1.8 0.55 1.6"></a-sphere>
+          <a-sphere position="0 -18 -160" radius="70" color="#2d4a30" scale="3 0.8 2.5"></a-sphere>
+          <a-sphere position="-40 -8 -60" radius="25" color="#4a6a4e" scale="1.5 0.4 1.3"></a-sphere>
+          <a-sphere position="50 -6 -55" radius="22" color="#3a5a40" scale="1.4 0.35 1.2"></a-sphere>
+          <a-sphere position="-20 -5 -35" radius="18" color="#4a7050" scale="1.3 0.3 1.1"></a-sphere>
+          <a-sphere position="30 -7 -75" radius="28" color="#3a5540" scale="1.6 0.45 1.4"></a-sphere>
+        </a-entity>
+        
+        <!-- Mountain Range (Distant) -->
+        <a-entity id="mountains" position="0 0 -200">
+          <a-cone position="0 0 0" radius-bottom="70" radius-top="6" height="120" color="#5a6a5a"></a-cone>
+          <a-cone position="0 90 0" radius-bottom="30" radius-top="0" height="50" color="#fff"></a-cone>
+          <a-cone position="-60 0 15" radius-bottom="55" radius-top="4" height="100" color="#4a5a4a"></a-cone>
+          <a-cone position="-60 75 15" radius-bottom="22" radius-top="0" height="38" color="#fff"></a-cone>
+          <a-cone position="65 0 -10" radius-bottom="60" radius-top="5" height="105" color="#5a6a5a"></a-cone>
+          <a-cone position="65 80 -10" radius-bottom="24" radius-top="0" height="40" color="#fff"></a-cone>
+          <a-cone position="-120 0 25" radius-bottom="45" radius-top="3" height="75" color="#4a5a4a"></a-cone>
+          <a-cone position="-120 56 25" radius-bottom="16" radius-top="0" height="28" color="#f0f0f0"></a-cone>
+          <a-cone position="120 0 20" radius-bottom="50" radius-top="4" height="85" color="#5a6a5a"></a-cone>
+          <a-cone position="120 64 20" radius-bottom="18" radius-top="0" height="32" color="#f5f5f5"></a-cone>
+          <a-cone position="-30 0 -20" radius-bottom="40" radius-top="3" height="70" color="#556055"></a-cone>
+          <a-cone position="-30 52 -20" radius-bottom="14" radius-top="0" height="25" color="#fff"></a-cone>
+          <a-cone position="35 0 -15" radius-bottom="35" radius-top="2" height="60" color="#4a5a4a"></a-cone>
+          <a-cone position="35 45 -15" radius-bottom="12" radius-top="0" height="22" color="#f8f8f8"></a-cone>
+        </a-entity>
+        
+        <!-- Paths -->
+        <a-entity id="paths">
+          <a-plane position="0 0.03 -40" rotation="-90 0 0" width="4" height="100" color="#8B7355"></a-plane>
+          <a-plane position="25 0.03 -60" rotation="-90 35 0" width="3" height="50" color="#8B7355"></a-plane>
+          <a-plane position="-30 0.03 -55" rotation="-90 -30 0" width="3" height="45" color="#8B7355"></a-plane>
+          <a-plane position="50 0.03 -40" rotation="-90 70 0" width="2.5" height="35" color="#9B8365"></a-plane>
+        </a-entity>
+        
+        <!-- Rocks and Boulders -->
+        <a-entity id="rocks">
+          <a-sphere position="18 0.5 -18" radius="1" color="#6b6b6b" scale="1.3 0.7 1.1" mixin="rock"></a-sphere>
+          <a-sphere position="20 0.35 -17" radius="0.6" color="#777" scale="1 0.6 0.9" mixin="rock"></a-sphere>
+          <a-sphere position="-22 0.6 -30" radius="1.2" color="#5a5a5a" scale="1.4 0.65 1.2" mixin="rock"></a-sphere>
+          <a-sphere position="42 0.7 -48" radius="1.5" color="#666" scale="1.6 0.7 1.3" mixin="rock"></a-sphere>
+          <a-sphere position="-45 0.5 -65" radius="1.1" color="#6a6a6a" scale="1.2 0.65 1.1" mixin="rock"></a-sphere>
+          <a-box position="55 0.6 -38" width="2" height="1.2" depth="1.5" color="#5e5e5e" rotation="0 30 0" mixin="rock"></a-box>
+          <a-box position="-60 0.7 -50" width="2.5" height="1.4" depth="1.8" color="#555" rotation="0 -20 5" mixin="rock"></a-box>
+          <a-sphere position="8 0.4 -25" radius="0.8" color="#707070" scale="1.1 0.55 1" mixin="rock"></a-sphere>
+          <a-sphere position="-12 0.45 -42" radius="0.9" color="#656565" scale="1.2 0.6 1.05" mixin="rock"></a-sphere>
+          <!-- Crystal formations -->
+          <a-cone position="70 0.8 -75" radius-bottom="0.3" radius-top="0.05" height="1.5" color="#9C27B0" material="emissive: #9C27B0; emissiveIntensity: 0.3"></a-cone>
+          <a-cone position="71 0.6 -74.5" radius-bottom="0.2" radius-top="0.03" height="1" color="#AB47BC" material="emissive: #AB47BC; emissiveIntensity: 0.25"></a-cone>
+          <a-cone position="69.5 0.5 -75.5" radius-bottom="0.25" radius-top="0.04" height="1.2" color="#8E24AA" material="emissive: #8E24AA; emissiveIntensity: 0.35"></a-cone>
+        </a-entity>
+      </a-entity>
+
+      <!-- ==================== WATER SYSTEM ==================== -->
+      <a-entity id="water-system">
+        <!-- Main Lake -->
+        <a-entity id="main-lake" position="30 0.12 -35">
+          <a-circle radius="18" color="#1E90FF" rotation="-90 0 0" mixin="water"
+            animation="property: material.opacity; from: 0.8; to: 0.9; dur: 2500; dir: alternate; loop: true"></a-circle>
+          <a-circle radius="17" position="0 0.03 0" color="#4aa8ff" rotation="-90 0 0" opacity="0.25"
+            animation="property: scale; from: 0.97 0.97 1; to: 1.03 1.03 1; dur: 3500; dir: alternate; loop: true"></a-circle>
+          <!-- Water lilies -->
+          <a-circle radius="0.5" position="-4 0.06 3" color="#228B22" rotation="-90 0 0"></a-circle>
+          <a-circle radius="0.18" position="-4 0.07 3" color="#FF69B4" rotation="-90 0 0"></a-circle>
+          <a-circle radius="0.45" position="3 0.06 -4" color="#228B22" rotation="-90 0 0"></a-circle>
+          <a-circle radius="0.15" position="3.1 0.07 -4" color="#FFB6C1" rotation="-90 0 0"></a-circle>
+          <a-circle radius="0.38" position="-1.5 0.06 5.5" color="#228B22" rotation="-90 0 0"></a-circle>
+          <a-circle radius="0.55" position="6 0.06 1" color="#228B22" rotation="-90 0 0"></a-circle>
+          <a-circle radius="0.2" position="6.1 0.07 1.1" color="#FF69B4" rotation="-90 0 0"></a-circle>
+          <!-- Reeds around lake -->
+          <a-cylinder radius="0.04" height="2.5" color="#827717" position="-10 1.25 8"></a-cylinder>
+          <a-cylinder radius="0.035" height="2.2" color="#9E9D24" position="-9.7 1.1 8.3"></a-cylinder>
+          <a-cylinder radius="0.04" height="2.8" color="#827717" position="-10.3 1.4 7.8"></a-cylinder>
+          <a-sphere radius="0.1" color="#5D4037" position="-10 2.55 8"></a-sphere>
+          <a-sphere radius="0.09" color="#5D4037" position="-10.3 2.85 7.8"></a-sphere>
+        </a-entity>
+        
+        <!-- River -->
+        <a-entity id="river">
+          <a-plane position="-45 0.1 -50" rotation="-90 -25 0" width="8" height="100" color="#1E90FF" mixin="water"></a-plane>
+          <a-plane position="-45 0.13 -50" rotation="-90 -25 0" width="7" height="98" color="#4aa8ff" opacity="0.25"
+            animation="property: position; to: -44 0.13 -49; dur: 3000; dir: alternate; loop: true"></a-plane>
+        </a-entity>
+        
+        <!-- Waterfall -->
+        <a-entity id="waterfall" position="-45 6 -105">
+          <a-box width="12" height="14" depth="5" color="#5a6a5a" position="0 -1 0"></a-box>
+          <a-plane width="6" height="12" color="#87CEEB" position="0 -1 2.6" opacity="0.75"
+            animation="property: material.opacity; from: 0.65; to: 0.85; dur: 400; dir: alternate; loop: true"></a-plane>
+          <a-sphere radius="7" position="0 -9 4" color="#1E90FF" scale="1.8 0.35 1.2" opacity="0.8"></a-sphere>
+          <!-- Mist effect -->
+          <a-sphere radius="3" position="0 -6 5" color="#fff" opacity="0.15"></a-sphere>
+          <a-sphere radius="2.5" position="1 -7 4.5" color="#fff" opacity="0.12"></a-sphere>
+        </a-entity>
+        
+        <!-- Small Pond -->
+        <a-entity id="pond" position="-20 0.1 -70">
+          <a-circle radius="8" color="#1E88E5" rotation="-90 0 0" mixin="water"></a-circle>
+        </a-entity>
+        
+        <!-- Swamp Area -->
+        <a-entity id="swamp" position="-80 0.05 -65">
+          <a-circle radius="15" color="#4A6741" rotation="-90 0 0" material="opacity: 0.9; roughness: 0.95"></a-circle>
+          <a-circle radius="13" position="0 0.02 0" color="#5A7751" rotation="-90 0 0" opacity="0.6"></a-circle>
+          <!-- Swamp vegetation -->
+          <a-cylinder radius="0.05" height="1.8" color="#2E4A28" position="3 0.9 2"></a-cylinder>
+          <a-cylinder radius="0.045" height="1.5" color="#3E5A38" position="3.3 0.75 2.2"></a-cylinder>
+          <a-cylinder radius="0.05" height="2" color="#2E4A28" position="-4 1 -3"></a-cylinder>
+        </a-entity>
+      </a-entity>
+
+      <!-- ==================== SKY SYSTEM ==================== -->
+      <a-sky id="sky" color="#87CEEB"></a-sky>
+      
+      <!-- Sun with corona effect -->
+      <a-entity id="sun" position="70 100 -150">
+        <a-sphere radius="18" color="#FFD93D" material="shader: flat; emissive: #FFD93D; emissiveIntensity: 1"></a-sphere>
+        <a-ring radius-inner="20" radius-outer="35" color="#FFE082" opacity="0.15" material="shader: flat; side: double"></a-ring>
+        <a-ring radius-inner="37" radius-outer="55" color="#FFF59D" opacity="0.08" material="shader: flat; side: double"></a-ring>
+        <a-ring radius-inner="57" radius-outer="80" color="#FFFDE7" opacity="0.04" material="shader: flat; side: double"></a-ring>
+      </a-entity>
+      
+      <!-- Moon with details -->
+      <a-entity id="moon" position="-70 -70 -150" visible="false">
+        <a-sphere radius="12" color="#F4F1DE" material="shader: flat"></a-sphere>
+        <a-circle radius="2.5" color="#D4D1C4" position="4 2 6" rotation="0 -12 0"></a-circle>
+        <a-circle radius="2" color="#E4E1D4" position="-2 3 6" rotation="0 8 0"></a-circle>
+        <a-circle radius="1.3" color="#C4C1B4" position="2 -2 6" rotation="0 -6 0"></a-circle>
+        <a-circle radius="1" color="#D4D1C4" position="-1.5 -1.5 6.2"></a-circle>
+        <a-ring radius-inner="14" radius-outer="22" color="#F5F5DC" opacity="0.08" material="shader: flat; side: double"></a-ring>
+      </a-entity>
+      
+      <!-- Stars container -->
+      <a-entity id="stars" visible="false"></a-entity>
+      
+      <!-- Aurora container (for special nights) -->
+      <a-entity id="aurora" visible="false"></a-entity>
+
+      <!-- ==================== LIGHTING ==================== -->
+      <a-entity id="ambient-light" light="type: ambient; color: #FFF5E1; intensity: 0.45"></a-entity>
+      <a-entity id="sun-light" light="type: directional; color: #FFF8E7; intensity: 0.85; castShadow: true" position="1 1 0"></a-entity>
+      <a-entity id="hemisphere-light" light="type: hemisphere; color: #87CEEB; groundColor: #3a5a40; intensity: 0.35"></a-entity>
+      <a-entity id="moon-light" light="type: directional; color: #B0C4DE; intensity: 0" position="-1 1 0"></a-entity>
+      <a-entity id="player-light" light="type: point; color: #FFE4B5; intensity: 0; distance: 15; decay: 2" position="0 1.6 0"></a-entity>
+
+      <!-- ==================== CLOUDS ==================== -->
+      <a-entity id="clouds">
+        <a-entity class="cloud" position="-50 42 -80" animation="property: position; to: 120 42 -80; dur: 240000; easing: linear; loop: true">
+          <a-sphere radius="8" color="#FFF" opacity="0.85"></a-sphere>
+          <a-sphere radius="6.5" color="#FFF" opacity="0.8" position="7 1.5 0"></a-sphere>
+          <a-sphere radius="6" color="#FFF" opacity="0.8" position="-6 1 1"></a-sphere>
+          <a-sphere radius="5.5" color="#FFF" opacity="0.75" position="3 3 -1"></a-sphere>
+          <a-sphere radius="5" color="#FFF" opacity="0.7" position="-3 2.5 2"></a-sphere>
+          <a-sphere radius="4" color="#FFF" opacity="0.7" position="10 1 1"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="cloud" position="70 48 -100" animation="property: position; to: -100 48 -100; dur: 280000; easing: linear; loop: true">
+          <a-sphere radius="7" color="#FFF" opacity="0.82"></a-sphere>
+          <a-sphere radius="5.5" color="#FFF" opacity="0.78" position="6 1 0"></a-sphere>
+          <a-sphere radius="5" color="#FFF" opacity="0.75" position="-5 0.5 1"></a-sphere>
+          <a-sphere radius="4.5" color="#FFF" opacity="0.72" position="2 2.5 -0.5"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="cloud" position="0 45 -120" animation="property: position; to: 150 45 -120; dur: 300000; easing: linear; loop: true">
+          <a-sphere radius="9" color="#FFF" opacity="0.83"></a-sphere>
+          <a-sphere radius="7" color="#FFF" opacity="0.78" position="8 2 0"></a-sphere>
+          <a-sphere radius="6" color="#FFF" opacity="0.75" position="-7 1.5 1"></a-sphere>
+          <a-sphere radius="5" color="#FFF" opacity="0.72" position="5 4 -1"></a-sphere>
+          <a-sphere radius="4.5" color="#FFF" opacity="0.7" position="-4 3.5 2"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="cloud" position="-100 50 -110" animation="property: position; to: 80 50 -110; dur: 320000; easing: linear; loop: true">
+          <a-sphere radius="6.5" color="#FFF" opacity="0.8"></a-sphere>
+          <a-sphere radius="5" color="#FFF" opacity="0.75" position="5.5 1 0"></a-sphere>
+          <a-sphere radius="4.5" color="#FFF" opacity="0.72" position="-4.5 0.5 0.5"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="cloud" position="110 40 -90" animation="property: position; to: -60 40 -90; dur: 220000; easing: linear; loop: true">
+          <a-sphere radius="6" color="#FFF" opacity="0.78"></a-sphere>
+          <a-sphere radius="4.5" color="#FFF" opacity="0.74" position="5 0.8 0"></a-sphere>
+          <a-sphere radius="4" color="#FFF" opacity="0.7" position="-4 0.4 0.5"></a-sphere>
+        </a-entity>
+      </a-entity>
+
+      <!-- ==================== WEATHER PARTICLES ==================== -->
+      <a-entity id="rain-container" visible="false"></a-entity>
+      <a-entity id="snow-container" visible="false"></a-entity>
+      <a-entity id="leaves-container"></a-entity>
+      <a-entity id="fireflies-container" visible="false"></a-entity>
+      <a-entity id="pollen-container"></a-entity>
+
+      <!-- ==================== FOREST ==================== -->
+      <a-entity id="forest">
+        <!-- Giant Oak Trees -->
+        <a-entity class="tree oak" position="-18 0 -28">
+          <a-cylinder radius="1.5" height="14" color="#5D4037" position="0 7 0" mixin="tree-trunk"></a-cylinder>
+          <a-sphere radius="9" color="#228B22" position="0 16 0" mixin="foliage"></a-sphere>
+          <a-sphere radius="7" color="#2E8B57" position="6 18 2" mixin="foliage"></a-sphere>
+          <a-sphere radius="6" color="#3CB371" position="-5 19 -2" mixin="foliage"></a-sphere>
+          <a-sphere radius="5.5" color="#228B22" position="3 20 -3" mixin="foliage"></a-sphere>
+          <a-sphere radius="5" color="#2E8B57" position="-3 17 4" mixin="foliage"></a-sphere>
+          <a-sphere radius="4" color="#3CB371" position="5 21 1" mixin="foliage"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="tree oak" position="35 0 -55">
+          <a-cylinder radius="1.3" height="12" color="#5D4037" position="0 6 0"></a-cylinder>
+          <a-sphere radius="8" color="#228B22" position="0 14 0"></a-sphere>
+          <a-sphere radius="6" color="#2E8B57" position="5 16 1.5"></a-sphere>
+          <a-sphere radius="5" color="#3CB371" position="-4 17 -1"></a-sphere>
+          <a-sphere radius="4.5" color="#228B22" position="2 18 -2.5"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="tree oak" position="-55 0 -70">
+          <a-cylinder radius="1.7" height="16" color="#5D4037" position="0 8 0"></a-cylinder>
+          <a-sphere radius="10" color="#1B5E20" position="0 18 0"></a-sphere>
+          <a-sphere radius="8" color="#2E7D32" position="7 20 2"></a-sphere>
+          <a-sphere radius="7" color="#388E3C" position="-6 21 -2"></a-sphere>
+          <a-sphere radius="6" color="#1B5E20" position="4 22 -4"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="tree oak" position="60 0 -40">
+          <a-cylinder radius="1.1" height="10" color="#5D4037" position="0 5 0"></a-cylinder>
+          <a-sphere radius="7" color="#228B22" position="0 12 0"></a-sphere>
+          <a-sphere radius="5" color="#2E8B57" position="4 13.5 1"></a-sphere>
+          <a-sphere radius="4" color="#3CB371" position="-3 14 -1"></a-sphere>
+        </a-entity>
+        
+        <!-- Pine Trees -->
+        <a-entity class="tree pine" position="22 0 -32">
+          <a-cylinder radius="0.75" height="7" color="#4A3728" position="0 3.5 0"></a-cylinder>
+          <a-cone radius-bottom="5.5" radius-top="0.25" height="8" color="#0B5345" position="0 9 0"></a-cone>
+          <a-cone radius-bottom="4.5" radius-top="0.18" height="7" color="#0E6655" position="0 15.5 0"></a-cone>
+          <a-cone radius-bottom="3.5" radius-top="0.12" height="6" color="#117A65" position="0 21 0"></a-cone>
+          <a-cone radius-bottom="2.5" radius-top="0" height="5" color="#148F77" position="0 25.5 0"></a-cone>
+        </a-entity>
+        
+        <a-entity class="tree pine" position="-35 0 -50">
+          <a-cylinder radius="0.95" height="8" color="#4A3728" position="0 4 0"></a-cylinder>
+          <a-cone radius-bottom="6.5" radius-top="0.35" height="9" color="#0B5345" position="0 10.5 0"></a-cone>
+          <a-cone radius-bottom="5.5" radius-top="0.25" height="8" color="#0E6655" position="0 18 0"></a-cone>
+          <a-cone radius-bottom="4.5" radius-top="0.15" height="7" color="#117A65" position="0 24.5 0"></a-cone>
+          <a-cone radius-bottom="3.5" radius-top="0" height="6" color="#148F77" position="0 30 0"></a-cone>
+        </a-entity>
+        
+        <a-entity class="tree pine" position="55 0 -75">
+          <a-cylinder radius="0.65" height="6" color="#4A3728" position="0 3 0"></a-cylinder>
+          <a-cone radius-bottom="4.5" radius-top="0.18" height="6.5" color="#0B5345" position="0 7.5 0"></a-cone>
+          <a-cone radius-bottom="3.6" radius-top="0.12" height="5.5" color="#0E6655" position="0 12.5 0"></a-cone>
+          <a-cone radius-bottom="2.7" radius-top="0" height="4.5" color="#117A65" position="0 16.5 0"></a-cone>
+        </a-entity>
+        
+        <a-entity class="tree pine" position="-70 0 -90">
+          <a-cylinder radius="0.85" height="7" color="#4A3728" position="0 3.5 0"></a-cylinder>
+          <a-cone radius-bottom="6" radius-top="0.3" height="8.5" color="#0B5345" position="0 9.5 0"></a-cone>
+          <a-cone radius-bottom="5" radius-top="0.2" height="7.5" color="#0E6655" position="0 16.5 0"></a-cone>
+          <a-cone radius-bottom="4" radius-top="0.12" height="6.5" color="#117A65" position="0 22.5 0"></a-cone>
+          <a-cone radius-bottom="3" radius-top="0" height="5.5" color="#148F77" position="0 27.5 0"></a-cone>
+        </a-entity>
+        
+        <!-- Birch Trees -->
+        <a-entity class="tree birch" position="-28 0 -38">
+          <a-cylinder radius="0.45" height="12" color="#F5F5DC" position="0 6 0">
+            <a-box width="0.5" height="0.18" depth="0.1" color="#333" position="0 3 0.45"></a-box>
+            <a-box width="0.38" height="0.14" depth="0.1" color="#333" position="0 1 0.45"></a-box>
+            <a-box width="0.45" height="0.16" depth="0.1" color="#333" position="0 -1.5 0.45"></a-box>
+            <a-box width="0.35" height="0.12" depth="0.1" color="#333" position="0 -3.5 0.45"></a-box>
+          </a-cylinder>
+          <a-sphere radius="4.5" color="#90EE90" position="0 14 0" opacity="0.9"></a-sphere>
+          <a-sphere radius="3.6" color="#98FB98" position="2.5 15.5 1" opacity="0.88"></a-sphere>
+          <a-sphere radius="3.2" color="#7CFC00" position="-2 16.5 -0.5" opacity="0.85"></a-sphere>
+          <a-sphere radius="2.8" color="#90EE90" position="1.5 17 -1.5" opacity="0.82"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="tree birch" position="40 0 -45">
+          <a-cylinder radius="0.38" height="10" color="#F5F5DC" position="0 5 0">
+            <a-box width="0.42" height="0.15" depth="0.1" color="#333" position="0 2.5 0.38"></a-box>
+            <a-box width="0.32" height="0.11" depth="0.1" color="#333" position="0 0 0.38"></a-box>
+          </a-cylinder>
+          <a-sphere radius="4" color="#90EE90" position="0 12 0" opacity="0.88"></a-sphere>
+          <a-sphere radius="3.2" color="#98FB98" position="2 13 0.5" opacity="0.85"></a-sphere>
+          <a-sphere radius="2.6" color="#7CFC00" position="-1.5 14 -0.5" opacity="0.82"></a-sphere>
+        </a-entity>
+        
+        <!-- Willow Tree -->
+        <a-entity class="tree willow" position="-12 0 -60">
+          <a-cylinder radius="1.1" height="10" color="#5D4037" position="0 5 0"></a-cylinder>
+          <a-sphere radius="7" color="#556B2F" position="0 12 0" opacity="0.88"></a-sphere>
+          <a-cylinder radius="0.07" height="10" color="#9ACD32" position="4 8 2" rotation="20 0 -15" opacity="0.65"></a-cylinder>
+          <a-cylinder radius="0.07" height="11" color="#9ACD32" position="-3.5 8 -2" rotation="-20 40 18" opacity="0.65"></a-cylinder>
+          <a-cylinder radius="0.06" height="9" color="#9ACD32" position="1 8 4" rotation="18 80 0" opacity="0.6"></a-cylinder>
+          <a-cylinder radius="0.07" height="10.5" color="#9ACD32" position="2 8 -3.5" rotation="-18 140 10" opacity="0.65"></a-cylinder>
+          <a-cylinder radius="0.06" height="9.5" color="#9ACD32" position="-2.5 8 2.5" rotation="18 -60 -12" opacity="0.6"></a-cylinder>
+          <a-cylinder radius="0.06" height="8.5" color="#9ACD32" position="3.5 8 0" rotation="12 200 6" opacity="0.58"></a-cylinder>
+        </a-entity>
+        
+        <!-- Palm Trees -->
+        <a-entity class="tree palm" position="50 0 -28">
+          <a-cylinder radius="0.6" height="16" color="#8B4513" position="0 8 0">
+            <a-torus radius="0.65" radius-tubular="0.12" color="#6B3410" position="0 -4 0" rotation="90 0 0"></a-torus>
+            <a-torus radius="0.6" radius-tubular="0.1" color="#6B3410" position="0 -2 0" rotation="90 0 0"></a-torus>
+            <a-torus radius="0.58" radius-tubular="0.08" color="#6B3410" position="0 0 0" rotation="90 0 0"></a-torus>
+            <a-torus radius="0.55" radius-tubular="0.07" color="#6B3410" position="0 2 0" rotation="90 0 0"></a-torus>
+            <a-torus radius="0.52" radius-tubular="0.06" color="#6B3410" position="0 4 0" rotation="90 0 0"></a-torus>
+          </a-cylinder>
+          <a-entity position="0 16.5 0">
+            <a-box width="0.3" height="0.3" depth="7" color="#228B22" rotation="42 0 0" position="0 0 3.5"></a-box>
+            <a-box width="0.3" height="0.3" depth="7" color="#2E8B57" rotation="42 72 0"></a-box>
+            <a-box width="0.3" height="0.3" depth="7" color="#228B22" rotation="42 144 0"></a-box>
+            <a-box width="0.3" height="0.3" depth="7" color="#2E8B57" rotation="42 216 0"></a-box>
+            <a-box width="0.3" height="0.3" depth="7" color="#228B22" rotation="42 288 0"></a-box>
+            <a-sphere radius="0.8" color="#654321" position="0 -0.7 0"></a-sphere>
+            <a-sphere radius="0.3" color="#8B4513" position="0.6 -0.5 0.3"></a-sphere>
+            <a-sphere radius="0.3" color="#8B4513" position="-0.5 -0.6 0.4"></a-sphere>
+          </a-entity>
+        </a-entity>
+        
+        <!-- Cherry Blossom Tree -->
+        <a-entity class="tree cherry" position="12 0 -18">
+          <a-cylinder radius="0.7" height="8" color="#6B4423" position="0 4 0"></a-cylinder>
+          <a-cylinder radius="0.3" height="3.5" color="#6B4423" position="2 6 0.5" rotation="0 0 -38"></a-cylinder>
+          <a-cylinder radius="0.25" height="3" color="#6B4423" position="-1.5 5.5 -0.3" rotation="0 0 32"></a-cylinder>
+          <a-sphere radius="5" color="#FFB7C5" position="0 10 0" opacity="0.9"></a-sphere>
+          <a-sphere radius="4" color="#FFC0CB" position="3 11 1" opacity="0.85"></a-sphere>
+          <a-sphere radius="3.5" color="#FFB7C5" position="-2.5 11.5 -0.5" opacity="0.88"></a-sphere>
+          <a-sphere radius="3" color="#FFC0CB" position="1.5 12 -2" opacity="0.82"></a-sphere>
+        </a-entity>
+        
+        <!-- More trees for density -->
+        <a-entity class="tree oak" position="-60 0 -45">
+          <a-cylinder radius="1.1" height="10" color="#5D4037" position="0 5 0"></a-cylinder>
+          <a-sphere radius="7" color="#228B22" position="0 12 0"></a-sphere>
+          <a-sphere radius="5" color="#2E8B57" position="4 13.5 1.5"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="tree pine" position="70 0 -65">
+          <a-cylinder radius="0.55" height="5.5" color="#4A3728" position="0 2.75 0"></a-cylinder>
+          <a-cone radius-bottom="4.2" radius-top="0.12" height="6.5" color="#0B5345" position="0 7.5 0"></a-cone>
+          <a-cone radius-bottom="3.3" radius-top="0" height="5.5" color="#0E6655" position="0 13 0"></a-cone>
+        </a-entity>
+        
+        <a-entity class="tree birch" position="-75 0 -55">
+          <a-cylinder radius="0.32" height="9" color="#F5F5DC" position="0 4.5 0"></a-cylinder>
+          <a-sphere radius="3.5" color="#90EE90" position="0 11 0" opacity="0.88"></a-sphere>
+          <a-sphere radius="2.5" color="#98FB98" position="1.5 12 0.5" opacity="0.85"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="tree oak" position="80 0 -90">
+          <a-cylinder radius="1.4" height="12" color="#5D4037" position="0 6 0"></a-cylinder>
+          <a-sphere radius="8.5" color="#1B5E20" position="0 14 0"></a-sphere>
+          <a-sphere radius="6" color="#2E7D32" position="5 16 2"></a-sphere>
+          <a-sphere radius="5.5" color="#388E3C" position="-4.5 17 -1.5"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="tree pine" position="-85 0 -100">
+          <a-cylinder radius="0.8" height="7" color="#4A3728" position="0 3.5 0"></a-cylinder>
+          <a-cone radius-bottom="5.5" radius-top="0.25" height="8" color="#0B5345" position="0 9 0"></a-cone>
+          <a-cone radius-bottom="4.5" radius-top="0.18" height="7" color="#0E6655" position="0 15.5 0"></a-cone>
+          <a-cone radius-bottom="3.5" radius-top="0" height="6" color="#117A65" position="0 21 0"></a-cone>
+        </a-entity>
+        
+        <!-- Dead Tree -->
+        <a-entity class="tree dead" position="-50 0 -85">
+          <a-cylinder radius="0.6" height="8" color="#4A3A2A" position="0 4 0"></a-cylinder>
+          <a-cylinder radius="0.2" height="3" color="#4A3A2A" position="1.5 6 0" rotation="0 0 -50"></a-cylinder>
+          <a-cylinder radius="0.15" height="2" color="#4A3A2A" position="-1 5.5 0.5" rotation="0 30 40"></a-cylinder>
+        </a-entity>
+      </a-entity>
+
+      <!-- ==================== FLORA ==================== -->
+      <a-entity id="flora">
+        <!-- Rose Garden -->
+        <a-entity id="roses" position="-10 0 -12">
+          <a-entity class="flower">
+            <a-cylinder radius="0.035" height="0.8" color="#2E7D32" position="0 0.4 0"></a-cylinder>
+            <a-sphere radius="0.22" color="#C62828" position="0 0.85 0"></a-sphere>
+            <a-box width="0.32" height="0.16" depth="0.02" color="#388E3C" position="0.16 0.45 0" rotation="0 0 -40"></a-box>
+          </a-entity>
+          <a-entity class="flower" position="0.6 0 0.45">
+            <a-cylinder radius="0.03" height="0.7" color="#2E7D32" position="0 0.35 0"></a-cylinder>
+            <a-sphere radius="0.19" color="#D32F2F" position="0 0.75 0"></a-sphere>
+          </a-entity>
+          <a-entity class="flower" position="-0.5 0 0.3">
+            <a-cylinder radius="0.032" height="0.75" color="#2E7D32" position="0 0.375 0"></a-cylinder>
+            <a-sphere radius="0.2" color="#E53935" position="0 0.8 0"></a-sphere>
+          </a-entity>
+          <a-entity class="flower" position="0.35 0 -0.35">
+            <a-cylinder radius="0.028" height="0.65" color="#2E7D32" position="0 0.325 0"></a-cylinder>
+            <a-sphere radius="0.17" color="#B71C1C" position="0 0.7 0"></a-sphere>
+          </a-entity>
+        </a-entity>
+        
+        <!-- Tulip Field -->
+        <a-entity id="tulips" position="6 0 -14">
+          <a-entity class="flower">
+            <a-cylinder radius="0.028" height="0.55" color="#33691E" position="0 0.275 0"></a-cylinder>
+            <a-sphere radius="0.16" color="#E91E63" position="0 0.6 0" scale="0.85 1.35 0.85"></a-sphere>
+          </a-entity>
+          <a-entity class="flower" position="0.45 0 0.28">
+            <a-cylinder radius="0.025" height="0.5" color="#33691E" position="0 0.25 0"></a-cylinder>
+            <a-sphere radius="0.14" color="#9C27B0" position="0 0.55 0" scale="0.85 1.35 0.85"></a-sphere>
+          </a-entity>
+          <a-entity class="flower" position="-0.4 0 0.18">
+            <a-cylinder radius="0.027" height="0.53" color="#33691E" position="0 0.265 0"></a-cylinder>
+            <a-sphere radius="0.15" color="#FF5722" position="0 0.58 0" scale="0.85 1.35 0.85"></a-sphere>
+          </a-entity>
+          <a-entity class="flower" position="0.25 0 -0.38">
+            <a-cylinder radius="0.024" height="0.48" color="#33691E" position="0 0.24 0"></a-cylinder>
+            <a-sphere radius="0.13" color="#FFEB3B" position="0 0.53 0" scale="0.85 1.35 0.85"></a-sphere>
+          </a-entity>
+          <a-entity class="flower" position="-0.18 0 -0.25">
+            <a-cylinder radius="0.026" height="0.52" color="#33691E" position="0 0.26 0"></a-cylinder>
+            <a-sphere radius="0.14" color="#E91E63" position="0 0.56 0" scale="0.85 1.35 0.85"></a-sphere>
+          </a-entity>
+        </a-entity>
+        
+        <!-- Sunflower Field -->
+        <a-entity id="sunflowers" position="14 0 -20">
+          <a-entity class="flower sunflower" animation="property: rotation; to: 0 15 5; dur: 4000; easing: easeInOutSine; dir: alternate; loop: true">
+            <a-cylinder radius="0.08" height="2.5" color="#558B2F" position="0 1.25 0"></a-cylinder>
+            <a-circle radius="0.8" color="#FFC107" position="0 2.6 0" rotation="-20 0 0"></a-circle>
+            <a-circle radius="0.4" color="#5D4037" position="0 2.63 0.08" rotation="-20 0 0"></a-circle>
+            <a-box width="0.5" height="0.25" depth="0.02" color="#7CB342" position="0.25 1.5 0" rotation="0 0 -45"></a-box>
+            <a-box width="0.45" height="0.22" depth="0.02" color="#8BC34A" position="-0.22 1 0" rotation="0 0 40"></a-box>
+          </a-entity>
+          <a-entity class="flower sunflower" position="0.9 0 0.45" animation="property: rotation; to: 0 -12 -4; dur: 4500; easing: easeInOutSine; dir: alternate; loop: true">
+            <a-cylinder radius="0.07" height="2.2" color="#558B2F" position="0 1.1 0"></a-cylinder>
+            <a-circle radius="0.7" color="#FFD54F" position="0 2.3 0" rotation="-15 20 0"></a-circle>
+            <a-circle radius="0.35" color="#5D4037" position="0 2.33 0.06" rotation="-15 20 0"></a-circle>
+          </a-entity>
+          <a-entity class="flower sunflower" position="-0.7 0 0.7" animation="property: rotation; to: 0 10 -3; dur: 3700; easing: easeInOutSine; dir: alternate; loop: true">
+            <a-cylinder radius="0.075" height="2.35" color="#558B2F" position="0 1.175 0"></a-cylinder>
+            <a-circle radius="0.75" color="#FFC107" position="0 2.45 0" rotation="-18 -15 0"></a-circle>
+            <a-circle radius="0.38" color="#5D4037" position="0 2.48 0.07" rotation="-18 -15 0"></a-circle>
+          </a-entity>
+        </a-entity>
+        
+        <!-- Mushroom Patches -->
+        <a-entity id="mushrooms" position="-14 0 -22">
+          <a-entity class="mushroom amanita">
+            <a-cylinder radius="0.16" height="0.45" color="#F5F5DC" position="0 0.225 0"></a-cylinder>
+            <a-cone radius-bottom="0.45" radius-top="0.16" height="0.32" color="#D32F2F" position="0 0.5 0"></a-cone>
+            <a-sphere radius="0.05" color="#FFF" position="0.2 0.58 0.14"></a-sphere>
+            <a-sphere radius="0.04" color="#FFF" position="-0.14 0.54 0.2"></a-sphere>
+            <a-sphere radius="0.045" color="#FFF" position="0.08 0.62 -0.16"></a-sphere>
+            <a-sphere radius="0.035" color="#FFF" position="-0.18 0.56 -0.12"></a-sphere>
+          </a-entity>
+          <a-entity class="mushroom" position="0.4 0 0.3">
+            <a-cylinder radius="0.12" height="0.35" color="#FFF8E1" position="0 0.175 0"></a-cylinder>
+            <a-cone radius-bottom="0.35" radius-top="0.12" height="0.24" color="#E53935" position="0 0.38 0"></a-cone>
+            <a-sphere radius="0.035" color="#FFF" position="0.14 0.42 0.08"></a-sphere>
+            <a-sphere radius="0.03" color="#FFF" position="-0.12 0.4 0.12"></a-sphere>
+          </a-entity>
+          <a-entity class="mushroom brown" position="-0.5 0 0.2">
+            <a-cylinder radius="0.14" height="0.28" color="#D7CCC8" position="0 0.14 0"></a-cylinder>
+            <a-sphere radius="0.28" color="#795548" position="0 0.35 0" scale="1 0.5 1"></a-sphere>
+          </a-entity>
+          <a-entity class="mushroom glow" position="0.65 0 -0.3">
+            <a-cylinder radius="0.08" height="0.22" color="#E1F5FE" position="0 0.11 0"></a-cylinder>
+            <a-cone radius-bottom="0.24" radius-top="0.08" height="0.18" color="#00BCD4" position="0 0.24 0" 
+              material="emissive: #00BCD4; emissiveIntensity: 0.45"></a-cone>
+          </a-entity>
+          <a-entity class="mushroom" position="-0.25 0 -0.45">
+            <a-cylinder radius="0.1" height="0.24" color="#EFEBE9" position="0 0.12 0"></a-cylinder>
+            <a-sphere radius="0.22" color="#A1887F" position="0 0.26 0" scale="1 0.55 1"></a-sphere>
+          </a-entity>
+        </a-entity>
+        
+        <!-- Fern Grove -->
+        <a-entity id="ferns" position="18 0 -25">
+          <a-entity class="fern">
+            <a-box width="0.12" height="1" depth="0.02" color="#2E7D32" rotation="-30 0 0" position="0 0.5 0.4"></a-box>
+            <a-box width="0.11" height="0.9" depth="0.02" color="#388E3C" rotation="-30 35 0" position="0.2 0.45 0.3"></a-box>
+            <a-box width="0.11" height="0.9" depth="0.02" color="#43A047" rotation="-30 -35 0" position="-0.2 0.45 0.3"></a-box>
+            <a-box width="0.1" height="0.8" depth="0.02" color="#4CAF50" rotation="-35 55 0" position="0.35 0.4 0.18"></a-box>
+            <a-box width="0.1" height="0.8" depth="0.02" color="#66BB6A" rotation="-35 -55 0" position="-0.35 0.4 0.18"></a-box>
+          </a-entity>
+          <a-entity class="fern" position="0.9 0 0.35">
+            <a-box width="0.11" height="0.85" depth="0.02" color="#2E7D32" rotation="-28 18 0" position="0 0.425 0.32"></a-box>
+            <a-box width="0.1" height="0.75" depth="0.02" color="#388E3C" rotation="-28 50 0" position="0.18 0.375 0.24"></a-box>
+            <a-box width="0.1" height="0.75" depth="0.02" color="#43A047" rotation="-28 -18 0" position="-0.14 0.375 0.24"></a-box>
+          </a-entity>
+        </a-entity>
+        
+        <!-- Berry Bushes -->
+        <a-entity id="berries">
+          <a-entity class="bush berry" position="10 0 -10">
+            <a-sphere radius="1" color="#2E7D32" position="0 0.5 0"></a-sphere>
+            <a-sphere radius="0.8" color="#388E3C" position="0.6 0.4 0.4"></a-sphere>
+            <a-sphere radius="0.6" color="#43A047" position="-0.45 0.35 0.3"></a-sphere>
+            <a-sphere radius="0.09" color="#1565C0" position="0.3 0.8 0.5"></a-sphere>
+            <a-sphere radius="0.08" color="#1976D2" position="-0.15 0.65 0.6"></a-sphere>
+            <a-sphere radius="0.085" color="#1565C0" position="0.5 0.55 0.45"></a-sphere>
+            <a-sphere radius="0.075" color="#1976D2" position="-0.4 0.7 0.4"></a-sphere>
+            <a-sphere radius="0.08" color="#1565C0" position="0.18 0.45 0.55"></a-sphere>
+          </a-entity>
+          <a-entity class="bush berry" position="-12 0 -32">
+            <a-sphere radius="0.9" color="#1B5E20" position="0 0.45 0"></a-sphere>
+            <a-sphere radius="0.7" color="#2E7D32" position="0.5 0.35 0.3"></a-sphere>
+            <a-sphere radius="0.08" color="#D32F2F" position="0.2 0.65 0.45"></a-sphere>
+            <a-sphere radius="0.075" color="#E53935" position="-0.25 0.58 0.5"></a-sphere>
+            <a-sphere radius="0.078" color="#C62828" position="0.4 0.5 0.4"></a-sphere>
+            <a-sphere radius="0.07" color="#D32F2F" position="-0.12 0.7 0.35"></a-sphere>
+          </a-entity>
+        </a-entity>
+        
+        <!-- Lavender Field -->
+        <a-entity id="lavender" position="-24 0 -20">
+          <a-entity class="lavender">
+            <a-cylinder radius="0.025" height="0.55" color="#558B2F" position="0 0.275 0"></a-cylinder>
+            <a-cone radius-bottom="0.09" radius-top="0.035" height="0.22" color="#7B1FA2" position="0 0.6 0"></a-cone>
+          </a-entity>
+          <a-entity class="lavender" position="0.18 0 0.12">
+            <a-cylinder radius="0.022" height="0.5" color="#558B2F" position="0 0.25 0"></a-cylinder>
+            <a-cone radius-bottom="0.08" radius-top="0.03" height="0.2" color="#8E24AA" position="0 0.55 0"></a-cone>
+          </a-entity>
+          <a-entity class="lavender" position="-0.15 0 0.1">
+            <a-cylinder radius="0.023" height="0.52" color="#558B2F" position="0 0.26 0"></a-cylinder>
+            <a-cone radius-bottom="0.085" radius-top="0.032" height="0.21" color="#7B1FA2" position="0 0.57 0"></a-cone>
+          </a-entity>
+          <a-entity class="lavender" position="0.1 0 -0.15">
+            <a-cylinder radius="0.02" height="0.48" color="#558B2F" position="0 0.24 0"></a-cylinder>
+            <a-cone radius-bottom="0.075" radius-top="0.028" height="0.18" color="#9C27B0" position="0 0.52 0"></a-cone>
+          </a-entity>
+        </a-entity>
+        
+        <!-- Cattails by water -->
+        <a-entity id="cattails" position="22 0 -30">
+          <a-cylinder radius="0.045" height="2.8" color="#827717" position="0 1.4 0"></a-cylinder>
+          <a-cylinder radius="0.04" height="2.5" color="#9E9D24" position="0.3 1.25 0.15"></a-cylinder>
+          <a-cylinder radius="0.045" height="3.1" color="#827717" position="-0.25 1.55 0.22"></a-cylinder>
+          <a-cylinder radius="0.038" height="2.3" color="#AFB42B" position="0.15 1.15 -0.2"></a-cylinder>
+          <a-cylinder radius="0.04" height="2.4" color="#9E9D24" position="-0.35 1.2 -0.12"></a-cylinder>
+          <a-sphere radius="0.12" color="#5D4037" position="0 2.85 0"></a-sphere>
+          <a-sphere radius="0.11" color="#5D4037" position="-0.25 3.15 0.22"></a-sphere>
+        </a-entity>
+        
+        <!-- Wildflowers scattered -->
+        <a-entity id="wildflowers">
+          <a-entity position="5 0 -8">
+            <a-cylinder radius="0.02" height="0.35" color="#33691E" position="0 0.175 0"></a-cylinder>
+            <a-sphere radius="0.1" color="#FDD835" position="0 0.4 0"></a-sphere>
+          </a-entity>
+          <a-entity position="7 0 -9">
+            <a-cylinder radius="0.018" height="0.3" color="#33691E" position="0 0.15 0"></a-cylinder>
+            <a-sphere radius="0.08" color="#29B6F6" position="0 0.35 0"></a-sphere>
+          </a-entity>
+          <a-entity position="-5 0 -15">
+            <a-cylinder radius="0.022" height="0.38" color="#33691E" position="0 0.19 0"></a-cylinder>
+            <a-sphere radius="0.11" color="#FF7043" position="0 0.45 0"></a-sphere>
+          </a-entity>
+          <a-entity position="2 0 -22">
+            <a-cylinder radius="0.02" height="0.32" color="#33691E" position="0 0.16 0"></a-cylinder>
+            <a-sphere radius="0.09" color="#AB47BC" position="0 0.38 0"></a-sphere>
+          </a-entity>
+        </a-entity>
+      </a-entity>
+
+      <!-- ==================== FAUNA ==================== -->
+      <a-entity id="fauna">
+        <!-- Butterflies -->
+        <a-entity class="butterfly" id="butterfly1" position="-4 1.8 -10" 
+          animation="property: position; to: 8 3 -16; dur: 16000; easing: easeInOutSine; loop: true; dir: alternate"
+          animation__rotate="property: rotation; to: 0 360 0; dur: 20000; loop: true">
+          <a-triangle color="#FF6B6B" vertex-a="0 0 0" vertex-b="0.32 0.2 0" vertex-c="0.16 0.45 0" 
+            animation="property: rotation; to: 0 0 55; dur: 130; easing: easeInOutSine; loop: true; dir: alternate"></a-triangle>
+          <a-triangle color="#FF6B6B" vertex-a="0 0 0" vertex-b="-0.32 0.2 0" vertex-c="-0.16 0.45 0" 
+            animation="property: rotation; to: 0 0 -55; dur: 130; easing: easeInOutSine; loop: true; dir: alternate"></a-triangle>
+          <a-cylinder radius="0.02" height="0.25" color="#333" position="0 0.125 0"></a-cylinder>
+        </a-entity>
+        
+        <a-entity class="butterfly" id="butterfly2" position="6 2.4 -12" 
+          animation="property: position; to: -10 2.2 -8; dur: 20000; easing: easeInOutSine; loop: true; dir: alternate">
+          <a-triangle color="#4ECDC4" vertex-a="0 0 0" vertex-b="0.36 0.22 0" vertex-c="0.18 0.5 0" 
+            animation="property: rotation; to: 0 0 50; dur: 100; easing: easeInOutSine; loop: true; dir: alternate"></a-triangle>
+          <a-triangle color="#4ECDC4" vertex-a="0 0 0" vertex-b="-0.36 0.22 0" vertex-c="-0.18 0.5 0" 
+            animation="property: rotation; to: 0 0 -50; dur: 100; easing: easeInOutSine; loop: true; dir: alternate"></a-triangle>
+        </a-entity>
+        
+        <a-entity class="butterfly" id="butterfly3" position="-12 1.6 -18" 
+          animation="property: position; to: 6 3.2 -10; dur: 25000; easing: easeInOutSine; loop: true; dir: alternate">
+          <a-triangle color="#FFB347" vertex-a="0 0 0" vertex-b="0.28 0.16 0" vertex-c="0.14 0.4 0" 
+            animation="property: rotation; to: 0 0 48; dur: 90; easing: easeInOutSine; loop: true; dir: alternate"></a-triangle>
+          <a-triangle color="#FFB347" vertex-a="0 0 0" vertex-b="-0.28 0.16 0" vertex-c="-0.14 0.4 0" 
+            animation="property: rotation; to: 0 0 -48; dur: 90; easing: easeInOutSine; loop: true; dir: alternate"></a-triangle>
+        </a-entity>
+        
+        <a-entity class="butterfly" id="butterfly4" position="14 2.2 -20" 
+          animation="property: position; to: -8 2.8 -25; dur: 28000; easing: easeInOutSine; loop: true; dir: alternate">
+          <a-triangle color="#9B59B6" vertex-a="0 0 0" vertex-b="0.34 0.2 0" vertex-c="0.17 0.48 0" 
+            animation="property: rotation; to: 0 0 52; dur: 120; easing: easeInOutSine; loop: true; dir: alternate"></a-triangle>
+          <a-triangle color="#9B59B6" vertex-a="0 0 0" vertex-b="-0.34 0.2 0" vertex-c="-0.17 0.48 0" 
+            animation="property: rotation; to: 0 0 -52; dur: 120; easing: easeInOutSine; loop: true; dir: alternate"></a-triangle>
+        </a-entity>
+        
+        <a-entity class="butterfly" id="butterfly5" position="0 2 -7" 
+          animation="property: position; to: 12 2.5 -14; dur: 18000; easing: easeInOutSine; loop: true; dir: alternate">
+          <a-triangle color="#2ECC71" vertex-a="0 0 0" vertex-b="0.3 0.18 0" vertex-c="0.15 0.42 0" 
+            animation="property: rotation; to: 0 0 50; dur: 115; easing: easeInOutSine; loop: true; dir: alternate"></a-triangle>
+          <a-triangle color="#2ECC71" vertex-a="0 0 0" vertex-b="-0.3 0.18 0" vertex-c="-0.15 0.42 0" 
+            animation="property: rotation; to: 0 0 -50; dur: 115; easing: easeInOutSine; loop: true; dir: alternate"></a-triangle>
+        </a-entity>
+
+        <!-- Birds -->
+        <a-entity class="bird" id="bird1" position="-60 22 -60" 
+          animation="property: position; to: 80 28 -80; dur: 45000; easing: linear; loop: true">
+          <a-sphere radius="0.45" color="#2C3E50"></a-sphere>
+          <a-cone radius-bottom="0.2" radius-top="0" height="0.4" color="#F39C12" position="0.45 0 0" rotation="0 0 90"></a-cone>
+          <a-box width="1.8" height="0.14" depth="0.5" color="#34495E" position="0 0 0"
+            animation="property: rotation; from: 0 0 -25; to: 0 0 25; dur: 260; easing: easeInOutSine; loop: true; dir: alternate"></a-box>
+          <a-cone radius-bottom="0.25" radius-top="0" height="0.5" color="#2C3E50" position="-0.5 0 0" rotation="0 0 -90"></a-cone>
+        </a-entity>
+        
+        <a-entity class="bird" id="bird2" position="70 20 -50" 
+          animation="property: position; to: -70 25 -70; dur: 50000; easing: linear; loop: true">
+          <a-sphere radius="0.4" color="#E74C3C"></a-sphere>
+          <a-cone radius-bottom="0.16" radius-top="0" height="0.32" color="#F1C40F" position="0.4 0 0" rotation="0 0 90"></a-cone>
+          <a-box width="1.6" height="0.12" depth="0.45" color="#C0392B" position="0 0 0"
+            animation="property: rotation; from: 0 0 -30; to: 0 0 30; dur: 220; easing: easeInOutSine; loop: true; dir: alternate"></a-box>
+        </a-entity>
+        
+        <a-entity class="bird" id="bird3" position="0 30 -90" 
+          animation="property: position; to: -60 35 -60; dur: 40000; easing: linear; loop: true">
+          <a-sphere radius="0.35" color="#1ABC9C"></a-sphere>
+          <a-box width="1.4" height="0.1" depth="0.4" color="#16A085" position="0 0 0"
+            animation="property: rotation; from: 0 0 -28; to: 0 0 28; dur: 240; easing: easeInOutSine; loop: true; dir: alternate"></a-box>
+        </a-entity>
+        
+        <!-- Crow Flock -->
+        <a-entity id="crow-flock" position="50 38 -100">
+          <a-entity class="bird crow" position="0 0 0" animation="property: position; to: -100 42 -60; dur: 55000; loop: true">
+            <a-sphere radius="0.5" color="#1a1a1a"></a-sphere>
+            <a-box width="2" height="0.14" depth="0.6" color="#2d2d2d"
+              animation="property: rotation; from: 0 0 -22; to: 0 0 22; dur: 300; loop: true; dir: alternate"></a-box>
+          </a-entity>
+          <a-entity class="bird crow" position="5 2 3" animation="property: position; to: -95 44 -57; dur: 55000; loop: true">
+            <a-sphere radius="0.45" color="#1a1a1a"></a-sphere>
+            <a-box width="1.8" height="0.12" depth="0.55" color="#2d2d2d"
+              animation="property: rotation; from: 0 0 -22; to: 0 0 22; dur: 330; loop: true; dir: alternate"></a-box>
+          </a-entity>
+          <a-entity class="bird crow" position="-4 -1 2" animation="property: position; to: -104 41 -58; dur: 55000; loop: true">
+            <a-sphere radius="0.48" color="#1a1a1a"></a-sphere>
+            <a-box width="1.9" height="0.13" depth="0.58" color="#2d2d2d"
+              animation="property: rotation; from: 0 0 -22; to: 0 0 22; dur: 280; loop: true; dir: alternate"></a-box>
+          </a-entity>
+        </a-entity>
+        
+        <!-- Eagle -->
+        <a-entity class="bird eagle" id="eagle" position="0 55 -120" 
+          animation="property: position; to: -90 60 -70; dur: 70000; easing: linear; loop: true"
+          animation__circle="property: rotation; to: 0 360 0; dur: 70000; loop: true">
+          <a-sphere radius="0.7" color="#4A3728"></a-sphere>
+          <a-sphere radius="0.4" color="#F5F5DC" position="0.6 0.12 0"></a-sphere>
+          <a-cone radius-bottom="0.22" radius-top="0" height="0.45" color="#FF8C00" position="0.85 0 0" rotation="0 0 90"></a-cone>
+          <a-box width="3.5" height="0.18" depth="1" color="#3E2723" position="0 0 0"
+            animation="property: rotation; from: 0 0 -10; to: 0 0 10; dur: 900; easing: easeInOutSine; loop: true; dir: alternate"></a-box>
+        </a-entity>
+
+       
+
+        <!-- Deer -->
+        <a-entity class="animal deer" id="deer" position="-25 0 -45" 
+          animation="property: position; to: -15 0 -55; dur: 18000; easing: easeInOutQuad; loop: true; dir: alternate">
+          <a-sphere radius="0.9" color="#8B4513" position="0 1.35 0" scale="1.6 1 1"></a-sphere>
+          <a-sphere radius="0.5" color="#A0522D" position="1.35 1.8 0"></a-sphere>
+          <a-sphere radius="0.075" color="#1a1a1a" position="1.6 1.95 0.22"></a-sphere>
+          <a-sphere radius="0.075" color="#1a1a1a" position="1.6 1.95 -0.22"></a-sphere>
+          <a-cone radius-bottom="0.09" radius-top="0.025" height="0.28" color="#654321" position="1.68 1.7 0" rotation="90 0 0"></a-cone>
+          <a-cylinder radius="0.09" height="0.4" color="#8B4513" position="1.5 2.18 0.14" rotation="0 0 -18"></a-cylinder>
+          <a-cylinder radius="0.09" height="0.4" color="#8B4513" position="1.5 2.18 -0.14" rotation="0 0 -18"></a-cylinder>
+          <!-- Antlers -->
+          <a-cylinder radius="0.045" height="0.55" color="#5D4037" position="1.4 2.4 0.18" rotation="-28 0 -22"></a-cylinder>
+          <a-cylinder radius="0.035" height="0.28" color="#5D4037" position="1.28 2.7 0.24" rotation="-65 0 -45"></a-cylinder>
+          <a-cylinder radius="0.028" height="0.22" color="#5D4037" position="1.45 2.65 0.22" rotation="-35 0 35"></a-cylinder>
+          <a-cylinder radius="0.045" height="0.55" color="#5D4037" position="1.4 2.4 -0.18" rotation="-28 0 22"></a-cylinder>
+          <a-cylinder radius="0.035" height="0.28" color="#5D4037" position="1.28 2.7 -0.24" rotation="-65 0 45"></a-cylinder>
+          <a-cylinder radius="0.028" height="0.22" color="#5D4037" position="1.45 2.65 -0.22" rotation="-35 0 -35"></a-cylinder>
+          <!-- Legs -->
+          <a-cylinder radius="0.09" height="1" color="#6B4423" position="0.45 0.5 0.35"></a-cylinder>
+          <a-cylinder radius="0.09" height="1" color="#6B4423" position="0.45 0.5 -0.35"></a-cylinder>
+          <a-cylinder radius="0.09" height="1" color="#6B4423" position="-0.55 0.5 0.3"></a-cylinder>
+          <a-cylinder radius="0.09" height="1" color="#6B4423" position="-0.55 0.5 -0.3"></a-cylinder>
+          <a-sphere radius="0.18" color="#F5DEB3" position="-0.9 1.3 0"></a-sphere>
+        </a-entity>
+
+        <!-- Fox -->
+        <a-entity class="animal fox" id="fox" position="28 0 -40" 
+          animation="property: position; to: 20 0 -32; dur: 14000; easing: easeInOutQuad; loop: true; dir: alternate">
+          <a-sphere radius="0.5" color="#FF6B35" position="0 0.6 0" scale="1.45 1 1"></a-sphere>
+          <a-sphere radius="0.32" color="#FF8C5A" position="0.6 0.8 0"></a-sphere>
+          <a-sphere radius="0.045" color="#1a1a1a" position="0.78 0.9 0.14"></a-sphere>
+          <a-sphere radius="0.045" color="#1a1a1a" position="0.78 0.9 -0.14"></a-sphere>
+          <a-cone radius-bottom="0.07" radius-top="0.025" height="0.2" color="#1a1a1a" position="0.9 0.75 0" rotation="90 0 0"></a-cone>
+          <!-- Ears -->
+          <a-cone radius-bottom="0.09" radius-top="0.025" height="0.2" color="#FF6B35" position="0.62 1.1 0.14" rotation="0 0 -18"></a-cone>
+          <a-cone radius-bottom="0.09" radius-top="0.025" height="0.2" color="#FF6B35" position="0.62 1.1 -0.14" rotation="0 0 18"></a-cone>
+          <!-- Tail -->
+          <a-cylinder radius="0.14" height="0.7" color="#FF6B35" position="-0.6 0.55 0" rotation="0 0 65"></a-cylinder>
+          <a-sphere radius="0.18" color="#FFF" position="-0.85 0.8 0"></a-sphere>
+          <!-- Legs -->
+          <a-cylinder radius="0.06" height="0.45" color="#1a1a1a" position="0.2 0.22 0.18"></a-cylinder>
+          <a-cylinder radius="0.06" height="0.45" color="#1a1a1a" position="0.2 0.22 -0.18"></a-cylinder>
+          <a-cylinder radius="0.055" height="0.4" color="#1a1a1a" position="-0.25 0.2 0.15"></a-cylinder>
+          <a-cylinder radius="0.055" height="0.4" color="#1a1a1a" position="-0.25 0.2 -0.15"></a-cylinder>
+        </a-entity>
+
+        <!-- Squirrel -->
+        <a-entity class="animal squirrel" id="squirrel" position="-18 1.5 -28"
+          animation="property: position; to: -15 3 -25; dur: 5000; easing: easeInOutQuad; loop: true; dir: alternate">
+          <a-sphere radius="0.18" color="#8B4513" position="0 0 0" scale="1.2 1 1"></a-sphere>
+          <a-sphere radius="0.12" color="#A0522D" position="0.18 0.08 0"></a-sphere>
+          <a-sphere radius="0.025" color="#1a1a1a" position="0.25 0.12 0.05"></a-sphere>
+          <a-sphere radius="0.025" color="#1a1a1a" position="0.25 0.12 -0.05"></a-sphere>
+          <a-cone radius-bottom="0.04" radius-top="0.015" height="0.08" color="#8B4513" position="0.2 0.2 0.06" rotation="0 0 -30"></a-cone>
+          <a-cone radius-bottom="0.04" radius-top="0.015" height="0.08" color="#8B4513" position="0.2 0.2 -0.06" rotation="0 0 30"></a-cone>
+          <a-cylinder radius="0.08" height="0.3" color="#8B4513" position="-0.2 0.1 0" rotation="0 0 -50"></a-cylinder>
+          <a-sphere radius="0.1" color="#A0522D" position="-0.35 0.22 0"></a-sphere>
+        </a-entity>
+
+        <!-- Wolf (distant, in shadows) -->
+        <a-entity class="animal wolf" id="wolf" position="-60 0 -80"
+          animation="property: position; to: -50 0 -90; dur: 25000; easing: easeInOutQuad; loop: true; dir: alternate">
+          <a-sphere radius="0.7" color="#4A4A4A" position="0 0.9 0" scale="1.5 1 1"></a-sphere>
+          <a-sphere radius="0.4" color="#5A5A5A" position="0.9 1.1 0"></a-sphere>
+          <a-sphere radius="0.06" color="#FFD700" position="1.12 1.22 0.18"></a-sphere>
+          <a-sphere radius="0.06" color="#FFD700" position="1.12 1.22 -0.18"></a-sphere>
+          <a-cone radius-bottom="0.12" radius-top="0.03" height="0.25" color="#4A4A4A" position="0.95 1.45 0.15" rotation="0 0 -15"></a-cone>
+          <a-cone radius-bottom="0.12" radius-top="0.03" height="0.25" color="#4A4A4A" position="0.95 1.45 -0.15" rotation="0 0 15"></a-cone>
+          <a-cone radius-bottom="0.1" radius-top="0.03" height="0.3" color="#3A3A3A" position="1.25 1 0" rotation="90 0 0"></a-cone>
+          <a-cylinder radius="0.08" height="0.8" color="#3A3A3A" position="0.3 0.4 0.3"></a-cylinder>
+          <a-cylinder radius="0.08" height="0.8" color="#3A3A3A" position="0.3 0.4 -0.3"></a-cylinder>
+          <a-cylinder radius="0.08" height="0.8" color="#3A3A3A" position="-0.4 0.4 0.25"></a-cylinder>
+          <a-cylinder radius="0.08" height="0.8" color="#3A3A3A" position="-0.4 0.4 -0.25"></a-cylinder>
+          <a-cylinder radius="0.12" height="0.6" color="#5A5A5A" position="-0.75 0.85 0" rotation="0 0 75"></a-cylinder>
+        </a-entity>
+
+        <!-- Frogs near pond -->
+        <a-entity class="animal frog" id="frog1" position="-18 0.15 -68"
+          animation="property: position.y; from: 0.15; to: 0.5; dur: 800; easing: easeOutQuad; loop: true; dir: alternate; delay: 2000">
+          <a-sphere radius="0.2" color="#4CAF50" position="0 0 0" scale="1.2 0.8 1"></a-sphere>
+          <a-sphere radius="0.1" color="#66BB6A" position="0.15 0.12 0.08"></a-sphere>
+          <a-sphere radius="0.1" color="#66BB6A" position="0.15 0.12 -0.08"></a-sphere>
+          <a-sphere radius="0.04" color="#1a1a1a" position="0.2 0.18 0.08"></a-sphere>
+          <a-sphere radius="0.04" color="#1a1a1a" position="0.2 0.18 -0.08"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="animal frog" id="frog2" position="-22 0.15 -71"
+          animation="property: position.y; from: 0.15; to: 0.55; dur: 750; easing: easeOutQuad; loop: true; dir: alternate; delay: 3500">
+          <a-sphere radius="0.18" color="#388E3C" position="0 0 0" scale="1.2 0.8 1"></a-sphere>
+          <a-sphere radius="0.09" color="#4CAF50" position="0.14 0.1 0.07"></a-sphere>
+          <a-sphere radius="0.09" color="#4CAF50" position="0.14 0.1 -0.07"></a-sphere>
+          <a-sphere radius="0.035" color="#1a1a1a" position="0.18 0.16 0.07"></a-sphere>
+          <a-sphere radius="0.035" color="#1a1a1a" position="0.18 0.16 -0.07"></a-sphere>
+        </a-entity>
+
+        <!-- Fish in lake -->
+        <a-entity id="fish-group" position="30 -0.3 -35">
+          <a-entity class="animal fish" position="0 0 0"
+            animation="property: position; to: 5 0.2 3; dur: 8000; easing: easeInOutSine; loop: true; dir: alternate">
+            <a-sphere radius="0.2" color="#FF6B35" scale="2 1 0.6"></a-sphere>
+            <a-triangle color="#FF8C5A" vertex-a="0.4 0 0" vertex-b="0.55 0.12 0" vertex-c="0.55 -0.12 0"></a-triangle>
+          </a-entity>
+          <a-entity class="animal fish" position="2 0.1 -1"
+            animation="property: position; to: -3 -0.1 2; dur: 10000; easing: easeInOutSine; loop: true; dir: alternate">
+            <a-sphere radius="0.15" color="#2196F3" scale="2 1 0.6"></a-sphere>
+            <a-triangle color="#42A5F5" vertex-a="0.3 0 0" vertex-b="0.42 0.1 0" vertex-c="0.42 -0.1 0"></a-triangle>
+          </a-entity>
+          <a-entity class="animal fish" position="-1 0.05 1.5"
+            animation="property: position; to: 4 0.15 -2; dur: 12000; easing: easeInOutSine; loop: true; dir: alternate">
+            <a-sphere radius="0.18" color="#FFD700" scale="2 1 0.6"></a-sphere>
+            <a-triangle color="#FFEB3B" vertex-a="0.36 0 0" vertex-b="0.5 0.11 0" vertex-c="0.5 -0.11 0"></a-triangle>
+          </a-entity>
+        </a-entity>
+
+        <!-- Ducks on water -->
+        <a-entity class="animal duck" id="duck1" position="28 0.25 -38"
+          animation="property: position; to: 35 0.25 -32; dur: 15000; easing: easeInOutSine; loop: true; dir: alternate">
+          <a-sphere radius="0.35" color="#FFF" position="0 0 0" scale="1.3 1 1"></a-sphere>
+          <a-sphere radius="0.22" color="#2E7D32" position="0.35 0.18 0"></a-sphere>
+          <a-cone radius-bottom="0.08" radius-top="0.03" height="0.18" color="#FF9800" position="0.52 0.1 0" rotation="90 0 0"></a-cone>
+          <a-sphere radius="0.04" color="#1a1a1a" position="0.45 0.25 0.1"></a-sphere>
+          <a-sphere radius="0.04" color="#1a1a1a" position="0.45 0.25 -0.1"></a-sphere>
+        </a-entity>
+        
+        <a-entity class="animal duck" id="duck2" position="32 0.25 -33"
+          animation="property: position; to: 25 0.25 -40; dur: 18000; easing: easeInOutSine; loop: true; dir: alternate">
+          <a-sphere radius="0.32" color="#FFF" position="0 0 0" scale="1.3 1 1"></a-sphere>
+          <a-sphere radius="0.2" color="#795548" position="0.32 0.16 0"></a-sphere>
+          <a-cone radius-bottom="0.07" radius-top="0.025" height="0.16" color="#FF9800" position="0.48 0.08 0" rotation="90 0 0"></a-cone>
+          <a-sphere radius="0.035" color="#1a1a1a" position="0.42 0.22 0.09"></a-sphere>
+          <a-sphere radius="0.035" color="#1a1a1a" position="0.42 0.22 -0.09"></a-sphere>
+        </a-entity>
+
+        <!-- Owl (night creature) -->
+        <a-entity class="animal owl" id="owl" position="-17 8 -28" visible="false">
+          <a-sphere radius="0.4" color="#8B4513" position="0 0 0"></a-sphere>
+          <a-sphere radius="0.35" color="#A0522D" position="0 0.35 0.15"></a-sphere>
+          <a-circle radius="0.15" color="#FFD700" position="0.12 0.42 0.3"></a-circle>
+          <a-circle radius="0.15" color="#FFD700" position="-0.12 0.42 0.3"></a-circle>
+          <a-circle radius="0.08" color="#1a1a1a" position="0.12 0.42 0.32"></a-circle>
+          <a-circle radius="0.08" color="#1a1a1a" position="-0.12 0.42 0.32"></a-circle>
+          <a-cone radius-bottom="0.05" radius-top="0.02" height="0.1" color="#FF9800" position="0 0.32 0.35" rotation="90 0 0"></a-cone>
+          <a-cone radius-bottom="0.12" radius-top="0.05" height="0.15" color="#6B4423" position="0.2 0.55 0.1" rotation="0 0 -25"></a-cone>
+          <a-cone radius-bottom="0.12" radius-top="0.05" height="0.15" color="#6B4423" position="-0.2 0.55 0.1" rotation="0 0 25"></a-cone>
+        </a-entity>
+
+        <!-- Bee swarm near flowers -->
+        <a-entity id="bees" position="14 1.5 -20">
+          <a-entity class="insect bee" 
+            animation="property: position; to: 1 0.5 1; dur: 2000; easing: easeInOutSine; loop: true; dir: alternate">
+            <a-sphere radius="0.08" color="#FFD700" scale="1.3 1 1"></a-sphere>
+            <a-box width="0.04" height="0.02" depth="0.15" color="#1a1a1a" position="0 0 0"></a-box>
+          </a-entity>
+          <a-entity class="insect bee" position="0.5 0.3 -0.5"
+            animation="property: position; to: -0.8 0.8 0.8; dur: 2500; easing: easeInOutSine; loop: true; dir: alternate">
+            <a-sphere radius="0.07" color="#FFD700" scale="1.3 1 1"></a-sphere>
+          </a-entity>
+          <a-entity class="insect bee" position="-0.3 0.6 0.3"
+            animation="property: position; to: 0.6 -0.2 -0.6; dur: 1800; easing: easeInOutSine; loop: true; dir: alternate">
+            <a-sphere radius="0.075" color="#FFD700" scale="1.3 1 1"></a-sphere>
+          </a-entity>
+        </a-entity>
+      </a-entity>
+
+      <!-- ==================== STRUCTURES ==================== -->
+      <a-entity id="structures">
+        <!-- Wooden Bridge over river -->
+        <a-entity id="bridge" position="-45 0.5 -35" rotation="0 -25 0">
+          <a-box width="5" height="0.3" depth="10" color="#8B4513"></a-box>
+          <a-box width="0.3" height="1.2" depth="0.3" color="#5D4037" position="2.2 0.6 4"></a-box>
+          <a-box width="0.3" height="1.2" depth="0.3" color="#5D4037" position="-2.2 0.6 4"></a-box>
+          <a-box width="0.3" height="1.2" depth="0.3" color="#5D4037" position="2.2 0.6 -4"></a-box>
+          <a-box width="0.3" height="1.2" depth="0.3" color="#5D4037" position="-2.2 0.6 -4"></a-box>
+          <a-box width="4.8" height="0.15" depth="0.15" color="#6B4423" position="0 1 4"></a-box>
+          <a-box width="4.8" height="0.15" depth="0.15" color="#6B4423" position="0 1 -4"></a-box>
+        </a-entity>
+        
+        <!-- Campfire -->
+        <a-entity id="campfire" position="5 0 -25">
+          <!-- Stones around fire -->
+          <a-sphere radius="0.25" color="#5a5a5a" position="0.6 0.12 0"></a-sphere>
+          <a-sphere radius="0.22" color="#666" position="-0.55 0.11 0.2"></a-sphere>
+          <a-sphere radius="0.24" color="#5a5a5a" position="0.2 0.12 0.55"></a-sphere>
+          <a-sphere radius="0.23" color="#666" position="-0.2 0.11 -0.55"></a-sphere>
+          <a-sphere radius="0.21" color="#5a5a5a" position="0.45 0.1 -0.4"></a-sphere>
+          <a-sphere radius="0.24" color="#666" position="-0.5 0.12 -0.3"></a-sphere>
+          <!-- Logs -->
+          <a-cylinder radius="0.12" height="0.8" color="#5D4037" position="0 0.2 0" rotation="90 0 0"></a-cylinder>
+          <a-cylinder radius="0.1" height="0.7" color="#4A3728" position="0.15 0.22 0" rotation="90 45 0"></a-cylinder>
+          <!-- Fire -->
+          <a-cone radius-bottom="0.25" radius-top="0" height="0.6" color="#FF6B35" position="0 0.5 0" 
+            material="emissive: #FF6B35; emissiveIntensity: 0.8"
+            animation="property: scale; from: 1 1 1; to: 0.9 1.15 0.9; dur: 300; dir: alternate; loop: true"></a-cone>
+          <a-cone radius-bottom="0.18" radius-top="0" height="0.5" color="#FFD700" position="0.08 0.55 0" 
+            material="emissive: #FFD700; emissiveIntensity: 0.9"
+            animation="property: scale; from: 1 1 1; to: 1.1 0.85 1.1; dur: 250; dir: alternate; loop: true"></a-cone>
+          <a-cone radius-bottom="0.12" radius-top="0" height="0.4" color="#FF9800" position="-0.05 0.6 0.05" 
+            material="emissive: #FF9800; emissiveIntensity: 0.85"
+            animation="property: scale; from: 1 1 1; to: 0.85 1.2 0.85; dur: 200; dir: alternate; loop: true"></a-cone>
+          <!-- Fire light -->
+          <a-entity light="type: point; color: #FF6B35; intensity: 0.8; distance: 12; decay: 2" position="0 0.8 0"></a-entity>
+        </a-entity>
+        
+        <!-- Wooden Fence Section -->
+        <a-entity id="fence" position="45 0 -20">
+          <a-box width="0.2" height="1.5" depth="0.2" color="#8B4513" position="0 0.75 0"></a-box>
+          <a-box width="0.2" height="1.5" depth="0.2" color="#8B4513" position="2 0.75 0"></a-box>
+          <a-box width="0.2" height="1.5" depth="0.2" color="#8B4513" position="4 0.75 0"></a-box>
+          <a-box width="4.2" height="0.15" depth="0.1" color="#A0522D" position="2 1.1 0"></a-box>
+          <a-box width="4.2" height="0.15" depth="0.1" color="#A0522D" position="2 0.5 0"></a-box>
+        </a-entity>
+        
+        <!-- Abandoned Cabin -->
+        <a-entity id="cabin" position="75 0 -55">
+          <a-box width="8" height="4" depth="6" color="#5D4037" position="0 2 0"></a-box>
+          <a-box width="8.5" height="0.3" depth="7" color="#4A3728" position="0 4.15 0" rotation="8 0 0"></a-box>
+          <a-box width="2" height="3" depth="0.3" color="#3E2723" position="0 1.5 3.1"></a-box>
+          <a-box width="1.5" height="1.5" depth="0.3" color="#87CEEB" position="2.5 2.5 3.1" opacity="0.5"></a-box>
+          <a-box width="1.5" height="1.5" depth="0.3" color="#87CEEB" position="-2.5 2.5 3.1" opacity="0.5"></a-box>
+        </a-entity>
+        
+        <!-- Beehive -->
+        <a-entity id="beehive" position="-16 2.5 -28">
+          <a-cylinder radius="0.4" height="0.8" color="#FFD54F" position="0 0 0"></a-cylinder>
+          <a-cone radius-bottom="0.45" radius-top="0.15" height="0.4" color="#FFC107" position="0 0.6 0"></a-cone>
+          <a-circle radius="0.15" color="#5D4037" position="0 -0.1 0.41"></a-circle>
+        </a-entity>
+      </a-entity>
+
+      <!-- ==================== CAMERA & PLAYER ==================== -->
+     <a-entity id="rig" position="0 1.6 0" movement-controls="controls: touch, keyboard; touchControlsEnabled: true">
+        <a-camera id="camera" look-controls wasd-controls="acceleration: 80" position="0 0 0">
+          <a-entity id="flashlight" light="type: spot; color: #FFF5E0; intensity: 0; distance: 25; angle: 35; penumbra: 0.3; decay: 2" position="0 0 0"></a-entity>
+        </a-camera>
+      </a-entity>
+
+       <!-- ==================== ANIMAUX ==================== -->
+        <a-entity gltf-model="/animaux/Vache.glb"
+                  position="8 0 -20"
+                  scale="0.5 0.5 0.5"
+                  animation-mixer>
+    </a-entity>
+
+    <a-entity gltf-model="/animaux/Alpaca.glb"
+                  position="60 0 -7"
+                  scale="1 1 1"
+                  animation-mixer>
+    </a-entity>
+
+    <a-entity gltf-model="/animaux/Cerf.glb"
+                  position="30 0 -8"
+                  scale="1 1 1"
+                  animation-mixer>
+    </a-entity>
+
+    <a-entity gltf-model="/animaux/Rat.glb"
+                  position="-40 0 -10"
+                  scale="1 1 1"
+                  animation-mixer>
+    </a-entity>
+
+    <a-entity gltf-model="/animaux/loup.glb"
+                  position="65 0 10"
+                  scale="1 1 1"
+                  animation-mixer>
+    </a-entity>
+
+    <a-entity gltf-model="/animaux/Renard.glb"
+                  position="-50 0 -2"
+                  scale="1 1 1"
+                  animation-mixer>
+    </a-entity>
+
+    <a-entity gltf-model="/animaux/Snake.glb"
+                  position="15 0 -13"
+                  scale="1 1 1"
+                  animation-mixer>
+    </a-entity>
+
+    <a-entity gltf-model="/animaux/Dragon.glb"
+                  position="7 5 -50"
+                  scale="1 1 1"
+                  animation-mixer>
+    </a-entity>
+
+      <a-entity gltf-model="/animaux/Pigeon.glb"
+                  position="3 7 -10"
+                  scale="1 1 1"
+                  animation-mixer>
+    </a-entity>
+
+    <a-entity gltf-model="/animaux/Donkey.glb"
+                  position="-60 0 20"
+                  scale="1 1 1"
+                  animation-mixer>
+    </a-entity>
+
+    <a-entity gltf-model="/animaux/Spider.glb"
+                  position="-16 3 -19"
+                  scale="1 1 1"
+                  animation-mixer>
+    </a-entity>
+
+    >
+
+    
+      
+    </a-scene>
+
+    <script>
+      // ==================== HUD TOGGLE SYSTEM ====================
+      // Liste des panneaux qui peuvent être masqués
+      const toggleablePanels = [
+        'right-panel',    // Inventaire
+        'quest-panel',    // Quêtes
+        'player-stats',   // Santé, énergie, faim, soif
+        'controls-panel'  // Contrôles
+      ];
+      
+      let hudVisible = true;
+      
+      function toggleHUD() {
+        hudVisible = !hudVisible;
+        toggleablePanels.forEach(panelId => {
+          const panel = document.getElementById(panelId);
+          if (panel) {
+            if (hudVisible) {
+              panel.classList.remove('hidden-panel');
+            } else {
+              panel.classList.add('hidden-panel');
+            }
+          }
+        });
+        
+        const toggleBtn = document.getElementById('toggle-hud-btn');
+        toggleBtn.textContent = hudVisible ? '🎮 Masquer HUD' : '🎮 Afficher HUD';
+        showNotification(hudVisible ? 'Interface affichée' : 'Interface masquée', 'info');
+      }
+      
+      // Attacher l'événement au bouton
+      document.getElementById('toggle-hud-btn').addEventListener('click', toggleHUD);
+      
+      // ==================== GAME STATE ====================
+      const gameState = {
+        time: 6, // 6:00 AM
+        day: 1,
+        season: 0, // 0=spring, 1=summer, 2=autumn, 3=winter
+        weather: 0, // 0=sunny, 1=cloudy, 2=rain, 3=storm, 4=snow, 5=fog
+        timeSpeed: 1,
+        flashlightOn: false,
+        
+        player: {
+          health: 100,
+          stamina: 100,
+          hunger: 100,
+          thirst: 100,
+          xp: 0,
+          level: 1,
+          position: { x: 0, y: 0, z: 0 }
+        },
+        
+        skills: {
+          agility: { level: 1, xp: 20 },
+          botany: { level: 1, xp: 15 },
+          fishing: { level: 1, xp: 10 },
+          tracking: { level: 1, xp: 5 },
+          mining: { level: 1, xp: 8 }
+        },
+        
+        inventory: {
+          wood: 0, stone: 0, flower: 0, mushroom: 0,
+          berry: 0, fish: 0, feather: 0, herb: 0,
+          honey: 0, crystal: 0, gold: 0, meat: 0
+        },
+        
+        quests: {
+          biomes: { current: 1, target: 5 },
+          collect: { current: 0, target: 20 },
+          animals: { current: 0, target: 10 }
+        },
+        
+        achievements: [],
+        biomesVisited: ['forest'],
+        animalsObserved: []
+      };
+
+      // ==================== SEASON & WEATHER DATA ====================
+      const seasons = [
+        { name: 'Printemps', icon: '🌸', baseTemp: 18, colors: { ground: '#3d6b42', sky: '#87CEEB' } },
+        { name: 'Ete', icon: '☀️', baseTemp: 28, colors: { ground: '#4a7c4e', sky: '#6BC5E8' } },
+        { name: 'Automne', icon: '🍂', baseTemp: 12, colors: { ground: '#8B6914', sky: '#A8C4D4' } },
+        { name: 'Hiver', icon: '❄️', baseTemp: 2, colors: { ground: '#E8E8E8', sky: '#C5D5E5' } }
+      ];
+
+      const weathers = [
+        { name: 'Ensoleille', icon: '☀️', tempMod: 3, visibility: 'Excellente' },
+        { name: 'Nuageux', icon: '☁️', tempMod: 0, visibility: 'Bonne' },
+        { name: 'Pluvieux', icon: '🌧️', tempMod: -3, visibility: 'Moyenne' },
+        { name: 'Orageux', icon: '⛈️', tempMod: -5, visibility: 'Faible' },
+        { name: 'Neigeux', icon: '🌨️', tempMod: -8, visibility: 'Faible' },
+        { name: 'Brumeux', icon: '🌫️', tempMod: -2, visibility: 'Tres faible' }
+      ];
+
+      const timeIcons = ['🌙', '🌙', '🌙', '🌙', '🌅', '🌅', '☀️', '☀️', '☀️', '☀️', '☀️', '☀️',
+                         '☀️', '☀️', '☀️', '☀️', '☀️', '🌅', '🌅', '🌙', '🌙', '🌙', '🌙', '🌙'];
+
+      const moonPhases = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
+
+      // ==================== DOM ELEMENTS ====================
+      const elements = {
+        clock: document.getElementById('clock'),
+        dayNum: document.getElementById('day-num'),
+        timeIcon: document.getElementById('time-icon'),
+        seasonName: document.getElementById('season-name'),
+        seasonIcon: document.getElementById('season-icon'),
+        weatherName: document.getElementById('weather-name'),
+        temperature: document.getElementById('temperature'),
+        feelsLike: document.getElementById('feels-like'),
+        windSpeed: document.getElementById('wind-speed'),
+        timeMult: document.getElementById('time-mult'),
+        biome: document.getElementById('biome'),
+        altitude: document.getElementById('altitude'),
+        fauna: document.getElementById('fauna'),
+        humidity: document.getElementById('humidity'),
+        visibility: document.getElementById('visibility'),
+        moonPhase: document.getElementById('moon-phase'),
+        healthBar: document.getElementById('health-bar'),
+        healthVal: document.getElementById('health-val'),
+        staminaBar: document.getElementById('stamina-bar'),
+        staminaVal: document.getElementById('stamina-val'),
+        hungerBar: document.getElementById('hunger-bar'),
+        hungerVal: document.getElementById('hunger-val'),
+        thirstBar: document.getElementById('thirst-bar'),
+        thirstVal: document.getElementById('thirst-val'),
+        xpBar: document.getElementById('xp-bar'),
+        xpVal: document.getElementById('xp-val'),
+        levelBadge: document.getElementById('level-badge'),
+        notifications: document.getElementById('notifications'),
+        weatherOverlay: document.getElementById('weather-overlay'),
+        achievement: document.getElementById('achievement'),
+        achievementText: document.getElementById('achievement-text'),
+        interactPrompt: document.getElementById('interact-prompt')
+      };
+
+      // A-Frame elements
+      let sky, sun, moon, stars, ambientLight, sunLight, moonLight, fog;
+      let rainContainer, snowContainer, fireflyContainer;
+      let camera, flashlight;
+
+      document.querySelector('a-scene').addEventListener('loaded', () => {
+        sky = document.getElementById('sky');
+        sun = document.getElementById('sun');
+        moon = document.getElementById('moon');
+        stars = document.getElementById('stars');
+        ambientLight = document.getElementById('ambient-light');
+        sunLight = document.getElementById('sun-light');
+        moonLight = document.getElementById('moon-light');
+        rainContainer = document.getElementById('rain-container');
+        snowContainer = document.getElementById('snow-container');
+        fireflyContainer = document.getElementById('fireflies-container');
+        camera = document.getElementById('camera');
+        flashlight = document.getElementById('flashlight');
+        
+        createStars();
+        createFireflies();
+        initMinimap();
+        
+        // Start game loops
+        setInterval(updateTime, 1000);
+        setInterval(updatePlayerStats, 5000);
+        setInterval(updateMinimap, 500);
+        
+        showNotification('🌍 Bienvenue dans le Monde Vivant!', 'success');
+        setTimeout(() => showNotification('💡 Explorez, collectez et survivez!', 'info'), 2000);
+      });
+
+      // ==================== TIME SYSTEM ====================
+      function updateTime() {
+        gameState.time += (0.02 * gameState.timeSpeed);
+        
+        if (gameState.time >= 24) {
+          gameState.time = 0;
+          gameState.day++;
+          
+          if (gameState.day % 7 === 0) {
+            gameState.season = (gameState.season + 1) % 4;
+            updateSeasonVisuals();
+            showNotification(`🍃 Nouvelle saison: ${seasons[gameState.season].name}!`);
+          }
+        }
+        
+        updateTimeDisplay();
+        updateLighting();
+        updateFaunaActivity();
+      }
+
+      function updateTimeDisplay() {
+        const hours = Math.floor(gameState.time);
+        const minutes = Math.floor((gameState.time % 1) * 60);
+        elements.clock.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        elements.dayNum.textContent = gameState.day;
+        elements.timeIcon.textContent = timeIcons[hours];
+        
+        const season = seasons[gameState.season];
+        elements.seasonName.textContent = season.name;
+        elements.seasonIcon.textContent = season.icon;
+        
+        const weather = weathers[gameState.weather];
+        elements.weatherName.textContent = weather.name;
+        
+        const temp = season.baseTemp + weather.tempMod + Math.sin(gameState.time * Math.PI / 12) * 5;
+        const windChill = temp - (parseInt(elements.windSpeed.textContent) / 10);
+        elements.temperature.textContent = `${Math.round(temp)}°C`;
+        elements.feelsLike.textContent = `${Math.round(windChill)}°C`;
+        elements.visibility.textContent = weather.visibility;
+        elements.moonPhase.textContent = moonPhases[gameState.day % 8];
+      }
+
+      function updateLighting() {
+        const hour = gameState.time;
+        const isNight = hour < 5 || hour > 20;
+        const isDawn = hour >= 5 && hour < 7;
+        const isDusk = hour >= 18 && hour < 20;
+        
+        let skyColor, ambientIntensity, sunIntensity, moonIntensity;
+        let sunY, moonY;
+        
+        if (isNight) {
+          const nightProgress = hour < 5 ? (hour + 4) / 9 : (hour - 20) / 4;
+          skyColor = '#0a1628';
+          ambientIntensity = 0.08;
+          sunIntensity = 0;
+          moonIntensity = 0.25;
+          sunY = -50;
+          moonY = 80 + Math.sin(hour * Math.PI / 12) * 20;
+          
+          moon.setAttribute('visible', true);
+          stars.setAttribute('visible', true);
+          fireflyContainer.setAttribute('visible', true);
+          document.getElementById('owl')?.setAttribute('visible', true);
+        } else if (isDawn) {
+          const progress = (hour - 5) / 2;
+          skyColor = lerpColor('#1a1a3a', '#FFB347', progress);
+          ambientIntensity = 0.2 + progress * 0.3;
+          sunIntensity = progress * 0.7;
+          moonIntensity = (1 - progress) * 0.2;
+          sunY = -20 + progress * 40;
+          moonY = 60 - progress * 80;
+          
+          moon.setAttribute('visible', progress < 0.5);
+          stars.setAttribute('visible', progress < 0.3);
+          fireflyContainer.setAttribute('visible', false);
+        } else if (isDusk) {
+          const progress = (hour - 18) / 2;
+          skyColor = lerpColor('#87CEEB', '#FF6B35', progress);
+          ambientIntensity = 0.5 - progress * 0.3;
+          sunIntensity = (1 - progress) * 0.85;
+          moonIntensity = progress * 0.15;
+          sunY = 60 - progress * 80;
+          moonY = -40 + progress * 80;
+          
+          moon.setAttribute('visible', progress > 0.5);
+          stars.setAttribute('visible', progress > 0.7);
+        } else {
+          // Day
+          const dayProgress = (hour - 7) / 11;
+          const season = seasons[gameState.season];
+          skyColor = season.colors.sky;
+          ambientIntensity = 0.45;
+          sunIntensity = 0.85;
+          moonIntensity = 0;
+          sunY = 40 + Math.sin(dayProgress * Math.PI) * 60;
+          moonY = -60;
+          
+          moon.setAttribute('visible', false);
+          stars.setAttribute('visible', false);
+          fireflyContainer.setAttribute('visible', false);
+          document.getElementById('owl')?.setAttribute('visible', false);
+        }
+        
+        // Apply weather modifications
+        if (gameState.weather === 2 || gameState.weather === 3) { // Rain or storm
+          skyColor = lerpColor(skyColor, '#4a5a6a', 0.5);
+          ambientIntensity *= 0.7;
+          sunIntensity *= 0.4;
+        } else if (gameState.weather === 5) { // Fog
+          skyColor = lerpColor(skyColor, '#b0b8c0', 0.6);
+          ambientIntensity *= 0.8;
+        }
+        
+        sky.setAttribute('color', skyColor);
+        ambientLight.setAttribute('light', 'intensity', ambientIntensity);
+        sunLight.setAttribute('light', 'intensity', sunIntensity);
+        moonLight.setAttribute('light', 'intensity', moonIntensity);
+        
+        sun.setAttribute('position', `70 ${sunY} -150`);
+        moon.setAttribute('position', `-70 ${moonY} -150`);
+        
+        // Update fog based on time and weather
+        const scene = document.querySelector('a-scene');
+        let fogDensity = 0.004;
+        if (isNight) fogDensity = 0.006;
+        if (gameState.weather === 5) fogDensity = 0.02;
+        if (gameState.weather === 2) fogDensity = 0.008;
+        scene.setAttribute('fog', `type: exponential; color: ${skyColor}; density: ${fogDensity}`);
+      }
+
+      function createStars() {
+        const starsEl = document.getElementById('stars');
+        for (let i = 0; i < 300; i++) {
+          const star = document.createElement('a-sphere');
+          const x = (Math.random() - 0.5) * 400;
+          const y = 50 + Math.random() * 100;
+          const z = -100 - Math.random() * 200;
+          const size = 0.1 + Math.random() * 0.3;
+          
+          star.setAttribute('position', `${x} ${y} ${z}`);
+          star.setAttribute('radius', size);
+          star.setAttribute('color', '#FFF');
+          star.setAttribute('material', 'shader: flat; emissive: #FFF; emissiveIntensity: 1');
+          star.setAttribute('animation', `property: material.opacity; from: 0.5; to: 1; dur: ${1000 + Math.random() * 2000}; dir: alternate; loop: true`);
+          starsEl.appendChild(star);
+        }
+      }
+
+      function createFireflies() {
+        const container = document.getElementById('fireflies-container');
+        for (let i = 0; i < 40; i++) {
+          const firefly = document.createElement('a-sphere');
+          const x = (Math.random() - 0.5) * 80;
+          const y = 0.5 + Math.random() * 3;
+          const z = -10 - Math.random() * 60;
+          
+          firefly.setAttribute('position', `${x} ${y} ${z}`);
+          firefly.setAttribute('radius', 0.05);
+          firefly.setAttribute('color', '#ADFF2F');
+          firefly.setAttribute('material', 'shader: flat; emissive: #ADFF2F; emissiveIntensity: 1');
+          firefly.setAttribute('animation', `property: position; to: ${x + (Math.random() - 0.5) * 3} ${y + (Math.random() - 0.5) * 2} ${z + (Math.random() - 0.5) * 3}; dur: ${3000 + Math.random() * 4000}; dir: alternate; loop: true; easing: easeInOutSine`);
+          firefly.setAttribute('animation__glow', `property: material.opacity; from: 0.3; to: 1; dur: ${500 + Math.random() * 1500}; dir: alternate; loop: true`);
+          container.appendChild(firefly);
+        }
+      }
+
+      // ==================== WEATHER SYSTEM ====================
+      function changeWeather() {
+        gameState.weather = (gameState.weather + 1) % weathers.length;
+        updateWeatherEffects();
+        showNotification(`🌤️ Meteo: ${weathers[gameState.weather].name}`);
+      }
+
+      function updateWeatherEffects() {
+        // Clear previous effects
+        rainContainer.innerHTML = '';
+        snowContainer.innerHTML = '';
+        rainContainer.setAttribute('visible', false);
+        snowContainer.setAttribute('visible', false);
+        elements.weatherOverlay.className = '';
+        
+        switch (gameState.weather) {
+          case 2: // Rain
+            createRain();
+            elements.weatherOverlay.classList.add('rain');
+            break;
+          case 3: // Storm
+            createRain(true);
+            elements.weatherOverlay.classList.add('storm');
+            break;
+          case 4: // Snow
+            createSnow();
+            break;
+          case 5: // Fog
+            elements.weatherOverlay.classList.add('fog');
+            break;
+        }
+      }
+
+      function createRain(isStorm = false) {
+        rainContainer.setAttribute('visible', true);
+        const count = isStorm ? 400 : 200;
+        
+        for (let i = 0; i < count; i++) {
+          const drop = document.createElement('a-cylinder');
+          const x = (Math.random() - 0.5) * 100;
+          const y = 30 + Math.random() * 20;
+          const z = -10 - Math.random() * 80;
+          
+          drop.setAttribute('position', `${x} ${y} ${z}`);
+          drop.setAttribute('radius', 0.02);
+          drop.setAttribute('height', 0.4);
+          drop.setAttribute('color', '#6BA3D6');
+          drop.setAttribute('opacity', 0.6);
+          drop.setAttribute('animation', `property: position.y; from: ${y}; to: 0; dur: ${800 + Math.random() * 400}; loop: true`);
+          rainContainer.appendChild(drop);
+        }
+        
+        if (isStorm) {
+          // Lightning effect periodically
+          setInterval(() => {
+            if (gameState.weather === 3) {
+              ambientLight.setAttribute('light', 'intensity', 2);
+              setTimeout(() => ambientLight.setAttribute('light', 'intensity', 0.3), 100);
+            }
+          }, 5000 + Math.random() * 10000);
+        }
+      }
+
+      function createSnow() {
+        snowContainer.setAttribute('visible', true);
+        
+        for (let i = 0; i < 300; i++) {
+          const flake = document.createElement('a-sphere');
+          const x = (Math.random() - 0.5) * 120;
+          const y = 35 + Math.random() * 25;
+          const z = -10 - Math.random() * 90;
+          
+          flake.setAttribute('position', `${x} ${y} ${z}`);
+          flake.setAttribute('radius', 0.05 + Math.random() * 0.05);
+          flake.setAttribute('color', '#FFF');
+          flake.setAttribute('opacity', 0.9);
+          flake.setAttribute('animation', `property: position.y; from: ${y}; to: 0; dur: ${4000 + Math.random() * 3000}; loop: true`);
+          flake.setAttribute('animation__sway', `property: position.x; from: ${x - 1}; to: ${x + 1}; dur: ${2000 + Math.random() * 1000}; dir: alternate; loop: true; easing: easeInOutSine`);
+          snowContainer.appendChild(flake);
+        }
+      }
+
+      // ==================== SEASON VISUALS ====================
+      function changeSeason() {
+        gameState.season = (gameState.season + 1) % 4;
+        updateSeasonVisuals();
+        showNotification(`🍃 Saison: ${seasons[gameState.season].name}`);
+      }
+
+      function updateSeasonVisuals() {
+        const season = seasons[gameState.season];
+        const ground = document.getElementById('ground');
+        
+        if (ground) {
+          ground.setAttribute('color', season.colors.ground);
+        }
+        
+        // Update foliage colors based on season
+        const oaks = document.querySelectorAll('.tree.oak a-sphere');
+        const cherries = document.querySelectorAll('.tree.cherry a-sphere');
+        
+        let foliageColors;
+        switch (gameState.season) {
+          case 0: // Spring
+            foliageColors = ['#228B22', '#2E8B57', '#3CB371'];
+            break;
+          case 1: // Summer
+            foliageColors = ['#1B5E20', '#2E7D32', '#388E3C'];
+            break;
+          case 2: // Autumn
+            foliageColors = ['#FF6B35', '#FFA500', '#FFD700'];
+            break;
+          case 3: // Winter
+            foliageColors = ['#4A5568', '#5A6A7A', '#6B7A8A'];
+            break;
+        }
+        
+        oaks.forEach((sphere, i) => {
+          sphere.setAttribute('color', foliageColors[i % foliageColors.length]);
+        });
+        
+        // Cherry blossoms
+        if (gameState.season === 0) {
+          cherries.forEach(s => s.setAttribute('color', '#FFB7C5'));
+        } else if (gameState.season === 1) {
+          cherries.forEach(s => s.setAttribute('color', '#228B22'));
+        } else if (gameState.season === 2) {
+          cherries.forEach(s => s.setAttribute('color', '#FF6B35'));
+        } else {
+          cherries.forEach(s => s.setAttribute('color', '#8B7355'));
+        }
+      }
+
+      // ==================== FAUNA ACTIVITY ====================
+      function updateFaunaActivity() {
+        const hour = gameState.time;
+        const isNight = hour < 5 || hour > 20;
+        const isDawn = hour >= 5 && hour < 7;
+        const isDusk = hour >= 18 && hour < 20;
+        
+        let activity;
+        if (isNight) {
+          activity = 'Nocturne';
+          // Show nocturnal animals
+          document.getElementById('owl')?.setAttribute('visible', true);
+          document.getElementById('wolf')?.setAttribute('visible', true);
+        } else if (isDawn || isDusk) {
+          activity = 'Elevee';
+        } else {
+          activity = 'Active';
+          document.getElementById('owl')?.setAttribute('visible', false);
+        }
+        
+        elements.fauna.textContent = activity;
+        
+        // Update humidity based on time and weather
+        let humidity = 50 + Math.sin(hour * Math.PI / 12) * 15;
+        if (gameState.weather === 2 || gameState.weather === 3) humidity += 25;
+        if (gameState.weather === 4) humidity += 15;
+        elements.humidity.textContent = `${Math.round(humidity)}%`;
+      }
+
+      // ==================== PLAYER STATS ====================
+      function updatePlayerStats() {
+        // Slowly decrease hunger and thirst
+        gameState.player.hunger = Math.max(0, gameState.player.hunger - 0.5);
+        gameState.player.thirst = Math.max(0, gameState.player.thirst - 0.7);
+        
+        // Stamina regenerates if not sprinting
+        if (gameState.player.stamina < 100) {
+          gameState.player.stamina = Math.min(100, gameState.player.stamina + 2);
+        }
+        
+        // Health affected by hunger/thirst
+        if (gameState.player.hunger < 20 || gameState.player.thirst < 20) {
+          gameState.player.health = Math.max(0, gameState.player.health - 1);
+        }
+        
+        // Update UI
+        updatePlayerUI();
+      }
+
+      function updatePlayerUI() {
+        const p = gameState.player;
+        
+        elements.healthBar.style.width = `${p.health}%`;
+        elements.healthVal.textContent = Math.round(p.health);
+        
+        elements.staminaBar.style.width = `${p.stamina}%`;
+        elements.staminaVal.textContent = Math.round(p.stamina);
+        
+        elements.hungerBar.style.width = `${p.hunger}%`;
+        elements.hungerVal.textContent = Math.round(p.hunger);
+        
+        elements.thirstBar.style.width = `${p.thirst}%`;
+        elements.thirstVal.textContent = Math.round(p.thirst);
+        
+        const xpForLevel = p.level * 100;
+        elements.xpBar.style.width = `${(p.xp / xpForLevel) * 100}%`;
+        elements.xpVal.textContent = `${p.xp}/${xpForLevel}`;
+        
+        const levelNames = ['Novice', 'Apprenti', 'Explorateur', 'Aventurier', 'Expert', 'Maitre'];
+        elements.levelBadge.textContent = `⭐ Niveau ${p.level} - ${levelNames[Math.min(p.level - 1, 5)]}`;
+      }
+
+      function addXP(amount) {
+        gameState.player.xp += amount;
+        const xpForLevel = gameState.player.level * 100;
+        
+        if (gameState.player.xp >= xpForLevel) {
+          gameState.player.xp -= xpForLevel;
+          gameState.player.level++;
+          showAchievement(`Niveau ${gameState.player.level} atteint!`);
+        }
+        
+        updatePlayerUI();
+      }
+
+      // ==================== INVENTORY ====================
+      function addToInventory(item, amount = 1) {
+        if (gameState.inventory.hasOwnProperty(item)) {
+          gameState.inventory[item] += amount;
+          document.getElementById(`qty-${item}`).textContent = gameState.inventory[item];
+          
+          // Update quest progress
+          gameState.quests.collect.current++;
+          updateQuestUI();
+          
+          addXP(5);
+          showNotification(`+${amount} ${getItemName(item)}`, 'success');
+          
+          // Skill progression
+          if (['flower', 'mushroom', 'berry', 'herb'].includes(item)) {
+            addSkillXP('botany', 10);
+          } else if (item === 'fish') {
+            addSkillXP('fishing', 15);
+          } else if (['stone', 'crystal', 'gold'].includes(item)) {
+            addSkillXP('mining', 12);
+          }
+        }
+      }
+
+      function getItemName(item) {
+        const names = {
+          wood: '🪵 Bois', stone: '🪨 Pierre', flower: '🌸 Fleur',
+          mushroom: '🍄 Champignon', berry: '🫐 Baie', fish: '🐟 Poisson',
+          feather: '🪶 Plume', herb: '🌿 Herbe', honey: '🍯 Miel',
+          crystal: '💎 Cristal', gold: '🪙 Or', meat: '🥩 Viande'
+        };
+        return names[item] || item;
+      }
+
+      function addSkillXP(skill, amount) {
+        const s = gameState.skills[skill];
+        s.xp += amount;
+        
+        if (s.xp >= s.level * 100) {
+          s.xp = 0;
+          s.level++;
+          showNotification(`📈 ${skill} niveau ${s.level}!`, 'success');
+        }
+        
+        document.getElementById(`skill-${skill}`).textContent = s.level;
+        document.getElementById(`skill-${skill}-bar`).style.width = `${(s.xp / (s.level * 100)) * 100}%`;
+      }
+
+      function updateQuestUI() {
+        const q = gameState.quests;
+        
+        document.getElementById('quest-biome').textContent = q.biomes.current;
+        document.getElementById('quest-biome-bar').style.width = `${(q.biomes.current / q.biomes.target) * 100}%`;
+        
+        document.getElementById('quest-collect').textContent = q.collect.current;
+        document.getElementById('quest-collect-bar').style.width = `${(q.collect.current / q.collect.target) * 100}%`;
+        
+        document.getElementById('quest-animals').textContent = q.animals.current;
+        document.getElementById('quest-animals-bar').style.width = `${(q.animals.current / q.animals.target) * 100}%`;
+        
+        // Check quest completion
+        if (q.collect.current >= q.collect.target && !gameState.achievements.includes('collector')) {
+          gameState.achievements.push('collector');
+          showAchievement('🧺 Collecteur accompli!');
+        }
+      }
+
+      // ==================== MINIMAP ====================
+      let minimapCtx;
+
+      function initMinimap() {
+        const canvas = document.getElementById('minimap-canvas');
+        minimapCtx = canvas.getContext('2d');
+      }
+
+      function updateMinimap() {
+        if (!minimapCtx || !camera) return;
+        
+        const ctx = minimapCtx;
+        const canvas = ctx.canvas;
+        const cameraEl = document.getElementById('rig');
+        const pos = cameraEl.getAttribute('position');
+        
+        // Clear
+        ctx.fillStyle = '#1a2030';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw terrain features
+        ctx.fillStyle = '#2d4a30';
+        ctx.beginPath();
+        ctx.arc(72 + 30 * 0.8, 72 + 35 * 0.8, 12, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw water
+        ctx.fillStyle = '#1E90FF';
+        ctx.beginPath();
+        ctx.arc(72 + 30 * 0.8, 72 + 35 * 0.8, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw river
+        ctx.strokeStyle = '#1E90FF';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(20, 60);
+        ctx.lineTo(30, 140);
+        ctx.stroke();
+        
+        // Draw trees (simplified)
+        ctx.fillStyle = '#228B22';
+        const treePositions = [
+          [-18, -28], [35, -55], [-55, -70], [22, -32], [-35, -50]
+        ];
+        treePositions.forEach(([x, z]) => {
+          const mapX = 72 + x * 0.8;
+          const mapY = 72 + z * 0.8;
+          if (mapX > 0 && mapX < 144 && mapY > 0 && mapY < 144) {
+            ctx.beginPath();
+            ctx.arc(mapX, mapY, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+        
+        // Draw player
+        const playerX = 72 + pos.x * 0.8;
+        const playerY = 72 + pos.z * 0.8;
+        
+        ctx.fillStyle = '#FF5722';
+        ctx.beginPath();
+        ctx.arc(playerX, playerY, 5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw player direction
+        const cameraRot = camera.getAttribute('rotation');
+        const angle = (cameraRot.y * Math.PI / 180) + Math.PI;
+        ctx.strokeStyle = '#FF5722';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(playerX, playerY);
+        ctx.lineTo(playerX + Math.sin(angle) * 12, playerY + Math.cos(angle) * 12);
+        ctx.stroke();
+        
+        // Update altitude display
+        elements.altitude.textContent = `${Math.round(pos.y + 10)}m`;
+      }
+
+      // ==================== ACTIONS ====================
+      function toggleTimeSpeed() {
+        const speeds = [1, 2, 5, 10];
+        const currentIndex = speeds.indexOf(gameState.timeSpeed);
+        gameState.timeSpeed = speeds[(currentIndex + 1) % speeds.length];
+        elements.timeMult.textContent = gameState.timeSpeed;
+        showNotification(`⏱️ Vitesse du temps: x${gameState.timeSpeed}`);
+      }
+
+      function toggleFlashlight() {
+        gameState.flashlightOn = !gameState.flashlightOn;
+        flashlight.setAttribute('light', 'intensity', gameState.flashlightOn ? 1.5 : 0);
+        showNotification(gameState.flashlightOn ? '🔦 Lampe allumee' : '🔦 Lampe eteinte');
+      }
+
+      function spawnCreature() {
+        const creatures = [
+          { name: 'Lapin', color: '#D2B48C', size: 0.4 },
+          { name: 'Renard', color: '#FF6B35', size: 0.5 },
+          { name: 'Cerf', color: '#8B4513', size: 0.9 },
+          { name: 'Hibou', color: '#8B4513', size: 0.4 },
+          { name: 'Ecureuil', color: '#A0522D', size: 0.2 }
+        ];
+        
+        const creature = creatures[Math.floor(Math.random() * creatures.length)];
+        const cameraPos = document.getElementById('rig').getAttribute('position');
+        
+        const entity = document.createElement('a-sphere');
+        entity.setAttribute('position', `${cameraPos.x + (Math.random() - 0.5) * 20} ${creature.size} ${cameraPos.z - 10 - Math.random() * 20}`);
+        entity.setAttribute('radius', creature.size);
+        entity.setAttribute('color', creature.color);
+        entity.setAttribute('animation', `property: position; to: ${cameraPos.x + (Math.random() - 0.5) * 40} ${creature.size} ${cameraPos.z - 20 - Math.random() * 30}; dur: 15000; easing: easeInOutQuad; loop: true; dir: alternate`);
+        
+        document.getElementById('fauna').appendChild(entity);
+        showNotification(`🦌 Un ${creature.name} est apparu!`);
+        
+        // Update quest
+        if (!gameState.animalsObserved.includes(creature.name)) {
+          gameState.animalsObserved.push(creature.name);
+          gameState.quests.animals.current++;
+          updateQuestUI();
+          addXP(20);
+        }
+      }
+
+      function teleportRandom() {
+        const locations = [
+          { x: 30, z: -35, name: 'Lac' },
+          { x: -45, z: -50, name: 'Riviere' },
+          { x: 75, z: -55, name: 'Cabane' },
+          { x: 5, z: -25, name: 'Feu de camp' },
+          { x: -80, z: -65, name: 'Marecage' },
+          { x: 70, z: -75, name: 'Cristaux' }
+        ];
+        
+        const loc = locations[Math.floor(Math.random() * locations.length)];
+        const rig = document.getElementById('rig');
+        rig.setAttribute('position', `${loc.x} 1.6 ${loc.z}`);
+        showNotification(`✨ Teleporte: ${loc.name}`);
+        
+        // Check for new biome discovery
+        const biome = getBiomeAtPosition(loc.x, loc.z);
+        if (!gameState.biomesVisited.includes(biome)) {
+          gameState.biomesVisited.push(biome);
+          gameState.quests.biomes.current++;
+          updateQuestUI();
+          showNotification(`🗺️ Nouveau biome decouvert: ${biome}!`, 'success');
+          addXP(50);
+        }
+      }
+
+      function getBiomeAtPosition(x, z) {
+        if (Math.abs(x - 30) < 20 && Math.abs(z + 35) < 20) return 'Lac';
+        if (x < -40 && z < -40) return 'Riviere';
+        if (x < -70) return 'Marecage';
+        if (x > 70 && z < -70) return 'Cristaux';
+        if (x > 60) return 'Plage';
+        return 'Foret';
+      }
+
+      // ==================== NOTIFICATIONS ====================
+      function showNotification(message, type = 'info') {
+        const notif = document.createElement('div');
+        notif.className = `notification ${type}`;
+        notif.innerHTML = message;
+        elements.notifications.appendChild(notif);
+        
+        setTimeout(() => notif.remove(), 3000);
+      }
+
+      function showAchievement(text) {
+        elements.achievementText.textContent = text;
+        elements.achievement.classList.add('show');
+        
+        setTimeout(() => elements.achievement.classList.remove('show'), 3000);
+      }
+
+      // ==================== UTILITIES ====================
+      function lerpColor(color1, color2, t) {
+        const c1 = hexToRgb(color1);
+        const c2 = hexToRgb(color2);
+        
+        const r = Math.round(c1.r + (c2.r - c1.r) * t);
+        const g = Math.round(c1.g + (c2.g - c1.g) * t);
+        const b = Math.round(c1.b + (c2.b - c1.b) * t);
+        
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+
+      function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16)
+        } : { r: 0, g: 0, b: 0 };
+      }
+
+      // ==================== KEYBOARD CONTROLS ====================
+      document.addEventListener('keydown', (e) => {
+        switch(e.key.toLowerCase()) {
+          case 'f':
+            toggleFlashlight();
+            break;
+          case 'e':
+            // Interaction - collect nearby items
+            const items = ['flower', 'mushroom', 'berry', 'wood', 'stone', 'herb'];
+            const item = items[Math.floor(Math.random() * items.length)];
+            addToInventory(item);
+            break;
+          case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8':
+            const slots = document.querySelectorAll('.hotbar-slot');
+            slots.forEach(s => s.classList.remove('selected'));
+            slots[parseInt(e.key) - 1]?.classList.add('selected');
+            break;
+        }
+      });
+
+      // Initialize UI
+      updatePlayerUI();
+      updateQuestUI();
+    </script>
+  </body>
+</html>
